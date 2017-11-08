@@ -30,7 +30,7 @@ typedef nx_struct socket_addr_t{
 // File descripter id. Each id is associated with a socket_store_t
 typedef uint8_t socket_t;
 
-// State of a socket. 
+// State of a socket.
 typedef struct socket_store_t{
     uint8_t flag;
     enum socket_state state;

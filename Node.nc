@@ -47,6 +47,7 @@ module Node{
    uses interface Timer<TMilli> as LSPTimer;
    uses interface CommandHandler;
    uses interface Queue<uint16_t> as q;
+   uses interface Pool<uint16_t> as p;
 
 
 }
@@ -79,6 +80,7 @@ implementation{ // each node's private variables must be declared here, (or it w
    //{
      uint16_t forwardingTableTo[50];
      uint16_t forwardingTableNext[50];
+     uint16_t pathCost[50];
 
      // max index number for both arrays
      // to[0] | next[0]
@@ -87,6 +89,7 @@ implementation{ // each node's private variables must be declared here, (or it w
      uint16_t forwardingTableNumNodes;
 
    //} forwarding;
+
 
 
 
@@ -337,6 +340,7 @@ implementation{ // each node's private variables must be declared here, (or it w
 
      // Cost from source to source is 0
      cost[TOS_NODE_ID] = 0;
+     pathCost[TOS_NODE_ID] = 0;
 
      // We don't have a node 0, so count it as visited and ignore
      visited[0] = TRUE;
@@ -384,6 +388,7 @@ implementation{ // each node's private variables must be declared here, (or it w
         if(cost[v] + 1 < cost[current_neighbor])
         {
           cost[current_neighbor] = cost[v] + 1;
+          pathCost[current_neighbor] = cost[v] + 1;
           prev[current_neighbor] = v;
         }
       }
@@ -454,9 +459,9 @@ implementation{ // each node's private variables must be declared here, (or it w
 
     for (i = 1; i <= totalNumNodes; i++) {
       if( forwardingTableNext[i] != 0)
-          dbg (channel, "To: %hhu, Next: %hhu\n", forwardingTableTo[i], forwardingTableNext[i]);
+          dbg (channel, "To: %hhu  |  Next: %hhu  |  Cost: %hhu  \n", forwardingTableTo[i], forwardingTableNext[i], pathCost[i]);
       else
-      dbg (channel, "To: %hhu, Next: %s\n", forwardingTableTo[i], "no path");
+      dbg (channel, "To: %hhu  |  Next: %s  |  Cost: %hhu  \n", forwardingTableTo[i], "no path", pathCost[i]);
     }
    }
 
@@ -466,9 +471,26 @@ implementation{ // each node's private variables must be declared here, (or it w
 event void Boot.booted(){
     int i;
     int j;
+    uint16_t z;
+
+    uint16_t * array;
+
+    z = 65;
 
     totalNumNodes++;
     dbg(GENERAL_CHANNEL, "NUM NODES: %d\n", totalNumNodes);
+
+    if(TOS_NODE_ID == 1)
+    {
+      call p.put(43);
+      dbg(COMMAND_CHANNEL, "EMPTY: %d\n", call p.empty());
+      dbg(COMMAND_CHANNEL, "MAX SIZE OF POOL: %hhu\n", call p.maxSize());
+
+      array = call p.get();
+      dbg(COMMAND_CHANNEL, "element 0: %hhu\n", (*array));
+
+
+    }
 
 
     routingTableNumNodes = 0;
