@@ -7,6 +7,7 @@ interface CommandHandler{
    event void printDistanceVector();
    event void setTestServer();
    event void setTestClient();
+   event void setClientClose();
    event void setAppServer();
    event void setAppClient();
 }

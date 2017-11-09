@@ -140,15 +140,15 @@ class TestSim:
 		# David is not actually sure if these next new 3 functions work:
 		
 	def cmdTestServer (self, address, port):
-		self.sendCMD (self.CMD_TEST_SERVER, destination, "server command");
+		self.sendCMD (self.CMD_TEST_SERVER, address, port);
 		#Initiates the server at node [address] and binds it to [port]
 		#print 'Testing '
 		#
 	
-	def cmdTestClient (self, dest, srcPort, destPort, transfer):
+	def cmdTestClient (self, destination, srcPort, destPort, transfer):
 		self.sendCMD (self.CMD_TEST_CLIENT, destination, "client command");
 	
-	def cmdClientClose (self, clientAddress, dest, srcPort, destPort):
+	def cmdClientClose (self, clientAddress, destination, srcPort, destPort):
 		self.sendCMD (self.CMD_KILL, destination, "close command");
 		
 		#remember that whitespace matters in python. This file uses spaces but not tabs
@@ -163,19 +163,30 @@ def main():
 	#s.addChannel(s.GENERAL_CHANNEL);
 	#s.addChannel(s.NEIGHBOR_CHANNEL);
 	#s.addChannel(s.ROUTING_CHANNEL);
-	s.runTime(100);
-	#s.runTime(100);
+	
+	
+	s.runTime(10);
+	s.cmdTestServer (1, '2');
+	s.runTime(10);
+	s.cmdTestClient (1, 2, 1, 2);
+	s.runTime(10);
+	s.cmdClientClose (1, 2, 1, 2);
+	s.runTime(10);
+	
+	
+	
+	
 
 	#s.neighborDMP(2);
 
-	s.linkStateDMP(2);
-	s.runTime(10);
-	s.routeDMP(2);
+	#s.linkStateDMP(2);
+	#s.runTime(10);
+	#s.routeDMP(2);
 	
-	s.runTime(10);
-	s.linkStateDMP(5);
-	s.runTime(10);
-	s.routeDMP(5);
+	#s.runTime(10);
+	#s.linkStateDMP(5);
+	#s.runTime(10);
+	#s.routeDMP(5);
 	'''
 	s.ping(1, 2, "Hello World");
 	s.runTime(10);
@@ -183,13 +194,13 @@ def main():
 	s.runTime(20);
 	'''
 
-	s.runTime(20);
-	s.ping(1,5, "Hi");
+	#s.runTime(20);
+	#s.ping(1,5, "Hi");
 	#s.runTime(20);
 	#s.neighborDiscover();
 	#s.neighborDMP (1);
 	#s.routeDMP(1);
-	s.runTime(100);
+	#s.runTime(100);
 
 	#s.runTime(20);
 

@@ -74,8 +74,13 @@ implementation{
                 break;
 
             case CMD_TEST_SERVER:
-                dbg(COMMAND_CHANNEL, "Command Type: Client\n");
+                dbg(COMMAND_CHANNEL, "Command Type: Server\n");
                 signal CommandHandler.setTestServer();
+                break;
+
+            case CMD_KILL:
+                dbg(COMMAND_CHANNEL, "Command Type: Client Close Connection\n");
+                signal CommandHandler.setClientClose();
                 break;
 
             default:
