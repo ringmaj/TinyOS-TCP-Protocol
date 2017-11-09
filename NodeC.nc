@@ -46,11 +46,20 @@ implementation {
     components CommandHandlerC;
     Node.CommandHandler -> CommandHandlerC;
 
-	components new QueueC(uint16_t, 150);
-	Node.q -> QueueC;
+  	components new QueueC(uint16_t, 150);
+  	Node.q -> QueueC;
 
+    components new HashmapC(uint16_t, 150);
+  	Node.h -> HashmapC;
 
-  components new PoolC(uint16_t, 150);
-  Node.p -> PoolC;
+    components new PoolC(uint16_t, 150);
+    Node.p -> PoolC;
+
+    components new TransportC();
+    Node.Transport -> TransportC;
+
 
 }
+
+
+//test
