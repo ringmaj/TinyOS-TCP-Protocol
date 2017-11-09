@@ -13,3 +13,5 @@ TestSim.pyc
 MakeFile
 Makefile
 Makefile.in
+arm/*
+!arm/Makefile
