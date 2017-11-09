@@ -50,6 +50,10 @@ module Node{
    uses interface Queue<uint16_t> as q;
    uses interface Pool<uint16_t> as p;
 
+   uses interface Hashmap<uint16_t> as h;
+
+   uses interface Transport;
+
 
 }
 
@@ -65,6 +69,7 @@ module Node{
 
 implementation{ // each node's private variables must be declared here, (or it will only be declared once for all nodes, so they all share the same variable)
    pack sendPackage;
+
 
 
 
@@ -113,7 +118,6 @@ implementation{ // each node's private variables must be declared here, (or it w
    uint32_t sentPacks [50]; // stores a packet's ((seq<<16) | src)) taken of last 50 previous packets sent. This will help recognize if a packet has already been sent before, so not to send it again. First 16 bits are the packet's seq. Last 16 bits are packet's src
    uint16_t packsSent = 0;  // counts number of packets sent by this node. Is incremented when a new pack is sent. (packsSent % 50) is used as the index of sentPacks to write the newly packet to
    uint16_t mySeqNum = 0; // counts number of packets created by this node (to keep track of duplicate packets). Is incremented when a new packet is created (with makePack). Is used as the sequence number when making a new pack
-   socket_t socketNums [MAX_NUM_OF_SOCKETS]; 	// a socket_t is just a uint8_t, defined in includes/socket.h
 
    // Prototypes
 
@@ -482,17 +486,7 @@ event void Boot.booted(){
     totalNumNodes++;
     dbg(GENERAL_CHANNEL, "NUM NODES: %d\n", totalNumNodes);
 
-    if(TOS_NODE_ID == 1)
-    {
-      call p.put(43);
-      dbg(COMMAND_CHANNEL, "EMPTY: %d\n", call p.empty());
-      dbg(COMMAND_CHANNEL, "MAX SIZE OF POOL: %hhu\n", call p.maxSize());
 
-      array = call p.get();
-      dbg(COMMAND_CHANNEL, "element 0: %hhu\n", (*array));
-
-
-    }
 
 
     routingTableNumNodes = 0;
@@ -777,18 +771,14 @@ event void Boot.booted(){
 
    event void CommandHandler.printDistanceVector(){}
 
-   event void CommandHandler.setTestServer(){
-	   dbg (COMMAND_CHANNEL, "setTestServer was called\n");
-   }
+   event void CommandHandler.setTestServer(
 
-   event void CommandHandler.setTestClient(){
-	   dbg (COMMAND_CHANNEL, "setTestClient was called\n");
-   }
+   dbg(COMMAND_CHANNEL, "SOCKET: %hhu", call Transport.socket());
 
-   event void CommandHandler.setClientClose(){
-	   dbg (COMMAND_CHANNEL, "setClientClose was call\n");
-   }
-   
+     ){}
+
+   event void CommandHandler.setTestClient(){}
+
    event void CommandHandler.setAppServer(){}
 
    event void CommandHandler.setAppClient(){}
