@@ -15,6 +15,8 @@ generic module TransportP(){
   // to see what funcitons we need to implement.
  provides interface Transport;
 
+ uses interface Random;
+
 }
 
 implementation{
@@ -25,15 +27,45 @@ implementation{
   // Use this to intiate a send task. We call this method so we can add
   // a delay between sends. If we don't add a delay there may be collisions.
 
+  socket_store_t socketArray[100];
 
 
    command socket_t Transport.socket()
   {
-  
-  };
 
-  command error_t Transport.bind(socket_t fd, socket_addr_t *addr)
+    socket_t fd;
+    int i;
+    bool unused;
+
+
+    // Get random socket fd, and check if it's taken
+    fd = call Random.rand16() %100;
+
+    for(i = 0; i < 100; i++)
+    {
+      if(socketArray[i].fd == fd)
+      {
+        unused = FALSE;
+        fd = NULL;
+      }
+    }
+
+    dbg (COMMAND_CHANNEL, "Socket # %hhu now used", fd);
+
+    return fd;
+  }
+
+
+
+
+
+  command error_t Transport.bind(socket_t fd, socket_addr_t *addr )
   {
+
+    socketArray[fd].fd = fd;
+    socketArray[fd].dest = *addr;
+    socketArray[fd].state = LISTEN;
+
 
   }
 
