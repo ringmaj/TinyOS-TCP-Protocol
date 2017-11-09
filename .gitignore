@@ -15,3 +15,5 @@ Makefile
 Makefile.in
 arm/*
 !arm/Makefile
+app.c
+sim.o
