@@ -35,20 +35,34 @@ implementation{
 
     socket_t fd;
     int i;
+    int j;
+    int availableSize;
     bool unused;
+    int availableSockets[100];
+    int foundSocket;
 
-
-    // Get random socket fd, and check if it's taken
-    fd = call Random.rand16() %100;
+    // find the number of unused sockets and add into unused array.
+    j = 0;
+    availableSize = 0;
 
     for(i = 0; i < 100; i++)
     {
-      if(socketArray[i].fd == fd)
+      if(socketArray[i].fd == NULL)
       {
-        unused = FALSE;
-        fd = NULL;
+        availableSockets[j] = i;
+        j++;
+        availableSize++;
       }
     }
+
+    // if there's no sockets available, return null
+    if(availableSize == 0)
+      return NULL;
+
+    // Get random socket fd from the available sockets
+    foundSocket = call Random.rand16() %availableSize;
+
+    fd = availableSockets[foundSocket];
 
     dbg (COMMAND_CHANNEL, "Socket # %hhu now used", fd);
 
