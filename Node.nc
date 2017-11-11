@@ -773,11 +773,13 @@ event void Boot.booted(){
 
    event void CommandHandler.setTestServer(
 
-   dbg(COMMAND_CHANNEL, "SOCKET: %hhu", call Transport.socket());
+  // dbg(COMMAND_CHANNEL, "SOCKET: %hhu", call Transport.socket());
 
      ){}
 
    event void CommandHandler.setTestClient(){}
+
+   event void CommandHandler.setClientClose(){}
 
    event void CommandHandler.setAppServer(){}
 
