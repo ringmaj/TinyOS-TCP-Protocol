@@ -777,8 +777,9 @@ event void Boot.booted(){
 
      ){}
 
-   event void CommandHandler.setTestClient(){}
-
+   event void CommandHandler.setTestClient(uint16_t destination, uint8_t srcPort, uint8_t destPort, uint16_t transfer){
+	   dbg (COMMAND_CHANNEL, "Destination: %hhu, srcPort: %hhu, destPort: %hhu, transfer: %hhu\n", destination, srcPort, destPort, transfer);
+   }
    event void CommandHandler.setClientClose(){}
 
    event void CommandHandler.setAppServer(){}
