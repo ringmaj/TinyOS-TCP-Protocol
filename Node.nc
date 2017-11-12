@@ -217,7 +217,7 @@ implementation{ // each node's private variables must be declared here, (or it w
 		return 0;
 	}
 	void makePack(pack *Package, uint16_t src, uint16_t dest, uint16_t TTL, uint16_t Protocol, uint16_t seq, uint8_t *payload, uint8_t length);
-	
+
 	void sendNeighborDiscoverPack() {
 		char text [] = "hi neighbors!"; // length is 2 (3 including null char byte '\0' at end)
 		//reset the list to empty every time neighbor discovery is called, then re-add them to list when they respond
@@ -232,7 +232,7 @@ implementation{ // each node's private variables must be declared here, (or it w
 		// The recieve function will now make a list of everyone who responded to this packet (who forwards it back with TTL=0).
 		// Maybe the neighbors can just send it only back to the source instead of to AM_BROADCAST_ADDR to all?
 	}
-	
+
 	void printLSP (uint8_t* data, char channel []) {
 		//int i;
 		//uint8_t arr [PACKET_MAX_PAYLOAD_SIZE];
@@ -242,7 +242,7 @@ implementation{ // each node's private variables must be declared here, (or it w
 		dbg (channel, "0x%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X\n", data[0], data[1], data[2], data[3], data[4], data[5], data[6], data[7], data[8], data[9], data[10], data[11], data[12], data[13], data[14], data[15], data[16], data[17], data[18], data[19]);
 		//dbg (ROUTING_CHANNEL, "%d", getBit(data, 0));
 	}
-	
+
 	void sendLSP () {
 		uint8_t data [PACKET_MAX_PAYLOAD_SIZE];
 		writeLinkStatePack (data);	// Creates and formats the LSP, and stores it in array "data"
@@ -282,7 +282,7 @@ implementation{ // each node's private variables must be declared here, (or it w
 		dbg(channel, "\n");
 		dbg(channel, "\n");
 	}
-	
+
 	void reply (uint16_t to) {
 		char text [] = "got it!\n";
 		makePack(&sendPackage, TOS_NODE_ID, to, 21, PROTOCOL_PINGREPLY, mySeqNum, text, PACKET_MAX_PAYLOAD_SIZE);
@@ -294,12 +294,12 @@ implementation{ // each node's private variables must be declared here, (or it w
 		packsSent++;
 		mySeqNum++;
 	}
-	
+
 	void logPack_command(pack *input){
 		dbg(COMMAND_CHANNEL, "Src: %hhu Dest: %hhu Seq: %hhu TTL: %hhu Protocol:%hhu	Payload: %s\n",
 		input->src, input->dest, input->seq, input->TTL, input->protocol, input->payload);
 	}
-	
+
 	bool anyUnvisited(bool v[], int size){
 		int i;
 		for(i = 0; i < size; i++)
@@ -311,7 +311,7 @@ implementation{ // each node's private variables must be declared here, (or it w
 		}
 		return FALSE;
 	}
-	
+
 	void updateForwardingTable(int size)
 	{
 		int i;
@@ -320,16 +320,16 @@ implementation{ // each node's private variables must be declared here, (or it w
 		int min;
 		uint16_t current_neighbor;
 		uint16_t nextHop;
-		
+
 		// Stores all visited vertices
 		bool visited[size+1];
-		
+
 		// Stores cost from the source to any node cost[i]
 		int cost[size+1];
-		
+
 		// Stores previous vertex
 		uint16_t prev[size+1];
-		
+
 		// Set all costs to infinity, no previous vertices visited
 		for(i = 1; i <= size; i++)
 		{
@@ -338,18 +338,18 @@ implementation{ // each node's private variables must be declared here, (or it w
 			prev[i] = 0;
 			visited[i] = FALSE;
 		}
-		
+
 		// Cost from source to source is 0
 		cost[TOS_NODE_ID] = 0;
 		pathCost[TOS_NODE_ID] = 0;
-		
+
 		// We don't have a node 0, so count it as visited and ignore
 		visited[0] = TRUE;
-		
+
 		// Do while there are unvisited nodes
 		while(anyUnvisited(visited, size) == TRUE)
 		{
-			
+
 			// find the first unvisited node, store cost as min
 			for(i = 1; i <= size; i++)
 			{
@@ -814,6 +814,9 @@ implementation{ // each node's private variables must be declared here, (or it w
 		socket_addr_t serverAddress;
 		socket_t fd;
 
+    int seq;
+    int ack;
+
 		dbg (COMMAND_CHANNEL, "Destination: %hhu, srcPort: %hhu, destPort: %hhu, transfer: %hhu\n", destination, srcPort, destPort, transfer);
 
 		ad.port = srcPort;
@@ -832,6 +835,9 @@ implementation{ // each node's private variables must be declared here, (or it w
 		// try to make a connection with the server
 		// call Transport.connect(fd, addr);
 
+
+
+    seq = Random.rand32();
 		sendSYN (destination, srcPort, destPort);
 
 		// timer to attempt connections
