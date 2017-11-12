@@ -141,7 +141,7 @@ class TestSim:
 
 	def cmdTestServer (self, source, port):
 		#self.sendCMD (self.CMD_TEST_SERVER, address, port);
-		self.sendCMD (self.CMD_TEST_SERVER, source, "{0}{1}".format( chr(source), chr(port)));
+		self.sendCMD (self.CMD_TEST_SERVER, source, "{0}".format( chr(port)));
 		#Initiates the server at node [address] and binds it to [port]
 		#print 'Testing '
 		#
