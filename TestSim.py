@@ -152,8 +152,9 @@ class TestSim:
 		self.sendCMD(self.CMD_TEST_CLIENT, source, "{0}{1}{2}{3}".format(chr(destination), chr(srcPort), chr(destPort), chr(transfer)));
 	#	self.sendCMD (self.CMD_TEST_CLIENT, destination, "client command");
 
-	def cmdClientClose (self, clientAddress, destination, srcPort, destPort):
-		self.sendCMD (self.CMD_KILL, destination, "close command");
+	def cmdClientClose (self, source, destination, srcPort, destPort):
+		self.sendCMD (self.CMD_KILL, source, "{0}{1}{2}".format(chr(destination), chr(srcPort), chr(destPort)));
+		#self.sendCMD (self.CMD_KILL, destination, "close command");
 
 		#remember that whitespace matters in python. This file uses spaces but not tabs
 
