@@ -67,7 +67,7 @@ implementation{
 
     fd = availableSockets[foundSocket];
 
-    dbg (COMMAND_CHANNEL, "Socket # %hhu now used", fd);
+    dbg (COMMAND_CHANNEL, "Socket # %hhu now used |  size: %d\n", fd, availableSize);
 
     return fd;
   }
