@@ -47,6 +47,8 @@ module Node{
    uses interface Timer<TMilli> as constantTimer;
    uses interface Timer<TMilli> as LSPTimer;
    uses interface Timer<TMilli> as serverTimer;
+   uses interface Timer<TMilli> as clientTimer;
+
    uses interface CommandHandler;
    uses interface Queue<uint16_t> as q;
    uses interface Pool<uint16_t> as p;
@@ -551,6 +553,10 @@ event void Boot.booted(){
 
    }
 
+   event void clientTimer.fired () {
+
+   }
+
 
    event void AMControl.startDone(error_t err){
       if(err == SUCCESS){
@@ -778,7 +784,7 @@ event void Boot.booted(){
    event void CommandHandler.printDistanceVector(){}
 
    /*event void CommandHandler.setTestServer(uint16_t address, uint8_t port){*/
-   event void CommandHandler.setTestServer(uint16_t address, uint8_t port){
+   event void CommandHandler.setTestServer(uint8_t port){
 
      int i;
      socket_addr_t ad;
@@ -820,9 +826,47 @@ event void Boot.booted(){
    }
 
    event void CommandHandler.setTestClient(uint16_t destination, uint8_t srcPort, uint8_t destPort, uint16_t transfer){
-	   dbg (COMMAND_CHANNEL, "Destination: %hhu, srcPort: %hhu, destPort: %hhu, transfer: %hhu\n", destination, srcPort, destPort, transfer);
+
+     int i;
+     socket_addr_t ad;
+     socket_addr_t * addr;
+     socket_addr_t serverAddress;
+     socket_t fd;
+
+     dbg (COMMAND_CHANNEL, "Destination: %hhu, srcPort: %hhu, destPort: %hhu, transfer: %hhu\n", destination, srcPort, destPort, transfer);
+
+     ad.port = srcPort;
+     ad.addr = TOS_NODE_ID;
+
+     addr = &ad;
+
+     fd  = call Transport.socket();
+     call Transport.bind(fd, addr);
+
+     serverAddress.port = destPort;
+     serverAddress.addr = destination;
+
+      addr = &serverAddress;
+
+     // try to make a connection with the server
+    // call Transport.connect(fd, addr);
+
+
+     // timer to attempt connections
+     call clientTimer.startPeriodic(2000);
+
+
+
+
+     // function to check if client tries connections
+     // accept()
+
+     // timer to attempt connections
+    // call clientTimer.startPeriodic(2000);
+
+
    }
-   event void CommandHandler.setClientClose(){}
+   event void CommandHandler.setClientClose(uint16_t destination, uint8_t srcPort, uint8_t destPort){}
 
    event void CommandHandler.setAppServer(){}
 
