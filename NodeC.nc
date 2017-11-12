@@ -30,10 +30,13 @@ implementation {
 	components new TimerMilliC() as myRandTimerC;
 	components new TimerMilliC() as myConstantTimerC;
 	components new TimerMilliC() as myLSPTimerC;
+  components new TimerMilliC() as myServerTimerC;
+
 	Node.periodicTimer->myTimerC;	// Wire interfact to component
 	Node.randomTimer->myRandTimerC;
 	Node.constantTimer->myConstantTimerC;
 	Node.LSPTimer->myLSPTimerC;
+  Node.serverTimer -> myServerTimerC;
 
     Node.Receive -> GeneralReceive;
 
