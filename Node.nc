@@ -803,7 +803,6 @@ event void Boot.booted(){
 
 
 
-
      /*socket_addr_t addr;
      socket_addr_t * ad;
      addr.port = 50;
