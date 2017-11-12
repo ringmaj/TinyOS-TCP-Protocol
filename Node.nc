@@ -273,6 +273,19 @@ implementation{ // each node's private variables must be declared here, (or it w
     mySeqNum++;
    }
 
+   void sendSYN (uint16_t destination, uint8_t srcPort, uint8_t destPort) {	// Establishes a TCP connection from the client to the server by sending an SYN Packet to the server
+	   uint8_t data [PACKET_MAX_PAYLOAD_SIZE];
+	   dbg (COMMAND_CHANNEL, "Sending SYN packet from port %hhu to node %hhu at port %hhu \n", srcPort, destination, destPort);
+	   data[0] = srcPort;
+	   data[1] = destPort;
+	   makePack (&sendPackage, TOS_NODE_ID, destination, 21, PROTOCOL_TCP, mySeqNum, data, PACKET_MAX_PAYLOAD_SIZE);
+	   dbg(COMMAND_CHANNEL, "Src: %hhu Dest: %hhu Seq: %hhu TTL: %hhu Protocol: %hhu  Payload: %hhu (srcPort), %hhu (destPort)\n", sendPackage.src, sendPackage.dest, sendPackage.seq, sendPackage.TTL, sendPackage.protocol, data[0], data[1]);
+	   
+	   call Sender.send (sendPackage, forwardingTableNext[destination]);
+	   sentPacks[packsSent%50] = (((sendPackage.seq) << 16) | sendPackage.src);  // keep track of all packs send so as not to send them twice
+	   packsSent++;
+	   mySeqNum++;
+   }
 
    void printNeighbors (char channel []) {
      int i;
@@ -832,7 +845,7 @@ event void Boot.booted(){
      socket_addr_t * addr;
      socket_addr_t serverAddress;
      socket_t fd;
-
+	 
      dbg (COMMAND_CHANNEL, "Destination: %hhu, srcPort: %hhu, destPort: %hhu, transfer: %hhu\n", destination, srcPort, destPort, transfer);
 
      ad.port = srcPort;
@@ -851,7 +864,8 @@ event void Boot.booted(){
      // try to make a connection with the server
     // call Transport.connect(fd, addr);
 
-
+	sendSYN (destination, srcPort, destPort);
+	
      // timer to attempt connections
      call clientTimer.startPeriodic(2000);
 
@@ -866,7 +880,9 @@ event void Boot.booted(){
 
 
    }
-   event void CommandHandler.setClientClose(uint16_t destination, uint8_t srcPort, uint8_t destPort){}
+   event void CommandHandler.setClientClose(uint16_t destination, uint8_t srcPort, uint8_t destPort){
+	   dbg (COMMAND_CHANNEL, "Destination: %hhu, srcPort: %hhu, destPort: %hhu\n", destination, srcPort, destPort);
+   }
 
    event void CommandHandler.setAppServer(){}
 
