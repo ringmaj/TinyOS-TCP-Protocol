@@ -14,12 +14,12 @@ class TestSim:
 	CMD_NEIGHBOR_DUMP = 1
 	CMD_ROUTE_DUMP=3
 	CMD_LINKSTATE_DUMP = 2
-	
+
 		#David added these commands. Their number values are copied from command.h
 	CMD_TEST_CLIENT=4
 	CMD_TEST_SERVER=5
 	CMD_KILL=6
-	
+
 	# CHANNELS - see includes/channels.h
 	COMMAND_CHANNEL="command";
 	GENERAL_CHANNEL="general";
@@ -133,28 +133,28 @@ class TestSim:
 	def addChannel(self, channelName, out=sys.stdout):
 		print 'Adding Channel', channelName;
 		self.t.addChannel(channelName, out);
-		
-		
-		
-		
+
+
+
+
 		# David is not actually sure if these next new 3 functions work:
-		
+
 	def cmdTestServer (self, source, address, port):
 		#self.sendCMD (self.CMD_TEST_SERVER, address, port);
 		self.sendCMD (self.CMD_TEST_SERVER, source, "{0}{1}".format( chr(address), chr(port));
 		#Initiates the server at node [address] and binds it to [port]
 		#print 'Testing '
 		#
-	
+
 	#def cmdTestClient(self, source, dest):
 	#	self.sendCMD(self.CMD_TEST_CLIENT, source, "{0}".format(chr(dest)));
 	def cmdTestClient (self, source, destination, srcPort, destPort, transfer):
 		self.sendCMD(self.CMD_TEST_CLIENT, source, "{0}{1}{2}{3}".format(chr(destination), chr(srcPort), chr(destPort), chr(transfer)));
 	#	self.sendCMD (self.CMD_TEST_CLIENT, destination, "client command");
-	
+
 	def cmdClientClose (self, clientAddress, destination, srcPort, destPort):
 		self.sendCMD (self.CMD_KILL, destination, "close command");
-		
+
 		#remember that whitespace matters in python. This file uses spaces but not tabs
 
 def main():
@@ -167,27 +167,27 @@ def main():
 	#s.addChannel(s.GENERAL_CHANNEL);
 	#s.addChannel(s.NEIGHBOR_CHANNEL);
 	#s.addChannel(s.ROUTING_CHANNEL);
-	
-	
+
+
 	s.runTime(10);
-	s.cmdTestServer (1, '2');
+	s.cmdTestServer (1, 1, 2);
 	s.runTime(10);
 	#s.cmdTestClient (1, 2, 1, 2);
 	s.cmdTestClient (1, 1, 2, 1, 2);
 	s.runTime(10);
 	s.cmdClientClose (1, 2, 1, 2);
 	s.runTime(10);
-	
-	
-	
-	
+
+
+
+
 
 	#s.neighborDMP(2);
 
 	#s.linkStateDMP(2);
 	#s.runTime(10);
 	#s.routeDMP(2);
-	
+
 	#s.runTime(10);
 	#s.linkStateDMP(5);
 	#s.runTime(10);
