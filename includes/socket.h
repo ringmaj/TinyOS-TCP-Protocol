@@ -37,7 +37,8 @@ typedef struct socket_store_t{
 
     // stores the socket fd
     socket_t fd;
-    
+
+    nx_uint16_t srcAddr;
     socket_port_t src;
     socket_addr_t dest;
 

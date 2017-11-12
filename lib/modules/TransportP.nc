@@ -28,6 +28,7 @@ implementation{
   // a delay between sends. If we don't add a delay there may be collisions.
 
   socket_store_t socketArray[100];
+  int serverIndex;
 
 
    command socket_t Transport.socket()
@@ -56,8 +57,10 @@ implementation{
     }
 
     // if there's no sockets available, return null
-    if(availableSize == 0)
+    if(availableSize == 0){
+      dbg (COMMAND_CHANNEL, "No sockets available!");
       return NULL;
+    }
 
     // Get random socket fd from the available sockets
     foundSocket = call Random.rand16() %availableSize;
@@ -76,15 +79,42 @@ implementation{
   command error_t Transport.bind(socket_t fd, socket_addr_t *addr )
   {
 
+    // binding server address and port to socket fd
     socketArray[fd].fd = fd;
-    socketArray[fd].dest = *addr;
+    socketArray[fd].src = addr-> port;
+    socketArray[fd].srcAddr = addr-> addr;
     socketArray[fd].state = LISTEN;
+    serverIndex = fd;
 
+    if(fd != NULL)
+      return SUCCESS;
+    else
+      return FALSE;
 
   }
 
 
-  command socket_t Transport.accept(socket_t fd){
+  command socket_t Transport.accept(socket_t fd, socket_addr_t *addr){
+    socket_t acceptedSocket;
+
+    acceptedSocket = call Transport.socket();
+    // if there are no sockets available, return null
+    if(acceptedSocket == NULL)
+      return NULL;
+
+    // found a socket, now copy the server socket and update destination and port to
+    //the accepted socket
+
+    socketArray[acceptedSocket].fd = fd;
+    socketArray[acceptedSocket].src = socketArray[serverIndex].src;
+    socketArray[acceptedSocket].srcAddr =socketArray[serverIndex].srcAddr;
+    socketArray[acceptedSocket].state = ESTABLISHED;
+
+    socketArray[acceptedSocket].dest.port = addr->port;
+    socketArray[acceptedSocket].dest.addr = addr->addr;
+
+
+    return acceptedSocket;
 
   }
 

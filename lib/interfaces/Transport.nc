@@ -52,7 +52,7 @@ interface Transport{
     *    a destination associated with the destination address and port.
     *    if not return a null socket.
     */
-   command socket_t accept(socket_t fd);
+   command socket_t accept(socket_t fd, socket_addr_t *addr);
 
    /**
     * Write to the socket from a buffer. This data will eventually be
