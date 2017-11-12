@@ -139,9 +139,9 @@ class TestSim:
 
 		# David is not actually sure if these next new 3 functions work:
 
-	def cmdTestServer (self, source, address, port):
+	def cmdTestServer (self, source, port):
 		#self.sendCMD (self.CMD_TEST_SERVER, address, port);
-		self.sendCMD (self.CMD_TEST_SERVER, source, "{0}{1}".format( chr(address), chr(port));
+		self.sendCMD (self.CMD_TEST_SERVER, source, "{0}{1}".format( chr(source), chr(port)));
 		#Initiates the server at node [address] and binds it to [port]
 		#print 'Testing '
 		#
@@ -170,7 +170,7 @@ def main():
 
 
 	s.runTime(10);
-	s.cmdTestServer (1, 1, 2);
+	s.cmdTestServer (1, 2);
 	s.runTime(10);
 	#s.cmdTestClient (1, 2, 1, 2);
 	s.cmdTestClient (1, 1, 2, 1, 2);
