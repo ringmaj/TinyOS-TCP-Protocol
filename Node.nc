@@ -46,6 +46,7 @@ module Node{
    uses interface Timer<TMilli> as randomTimer;
    uses interface Timer<TMilli> as constantTimer;
    uses interface Timer<TMilli> as LSPTimer;
+   uses interface Timer<TMilli> as serverTimer;
    uses interface CommandHandler;
    uses interface Queue<uint16_t> as q;
    uses interface Pool<uint16_t> as p;
@@ -546,6 +547,11 @@ event void Boot.booted(){
      sendLSP();
    }
 
+   event void serverTimer.fired () {
+
+   }
+
+
    event void AMControl.startDone(error_t err){
       if(err == SUCCESS){
          dbg(GENERAL_CHANNEL, "Radio On\n");
@@ -771,11 +777,48 @@ event void Boot.booted(){
 
    event void CommandHandler.printDistanceVector(){}
 
-   event void CommandHandler.setTestServer(
+   /*event void CommandHandler.setTestServer(uint16_t address, uint8_t port){*/
+   event void CommandHandler.setTestServer(uint16_t address, uint8_t port){
 
-  // dbg(COMMAND_CHANNEL, "SOCKET: %hhu", call Transport.socket());
+     int i;
+     socket_addr_t ad;
+     socket_addr_t * addr;
+     socket_t fd;
 
-     ){}
+     // change port to one from cmd
+     ad.port = port;
+     ad.addr = TOS_NODE_ID;
+
+     addr = &ad;
+
+     fd  = call Transport.socket();
+     call Transport.bind(fd, addr);
+
+     // function to check if client tries connections
+     // accept()
+
+     // timer to attempt connections
+     call serverTimer.startPeriodic(2000);
+
+
+
+
+
+     /*socket_addr_t addr;
+     socket_addr_t * ad;
+     addr.port = 50;
+     addr.addr = 1;
+
+     ad = &addr;
+
+     for(i = 0; i < 200; i++)
+     {
+
+       call Transport.bind(call Transport.socket(), ad);
+     }*/
+
+
+   }
 
    event void CommandHandler.setTestClient(uint16_t destination, uint8_t srcPort, uint8_t destPort, uint16_t transfer){
 	   dbg (COMMAND_CHANNEL, "Destination: %hhu, srcPort: %hhu, destPort: %hhu, transfer: %hhu\n", destination, srcPort, destPort, transfer);
