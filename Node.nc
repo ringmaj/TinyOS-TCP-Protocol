@@ -836,8 +836,9 @@ implementation{ // each node's private variables must be declared here, (or it w
 		// call Transport.connect(fd, addr);
 
 
-
+    // create random sequence number to start
     seq = Random.rand32();
+
 		sendSYN (destination, srcPort, destPort);
 
 		// timer to attempt connections
