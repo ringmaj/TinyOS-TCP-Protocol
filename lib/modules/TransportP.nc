@@ -31,6 +31,11 @@ implementation{
   int serverIndex;
 
 
+  command socket_store_t Transport.getSocketArray(socket_t fd)
+  {
+    return socketArray[fd];
+  }
+
    command socket_t Transport.socket()
   {
 
