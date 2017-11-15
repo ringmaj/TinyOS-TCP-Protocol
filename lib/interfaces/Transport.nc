@@ -144,4 +144,8 @@ interface Transport{
     *   to listen else FAIL.
     */
    command error_t listen(socket_t fd);
+
+   command socket_store_t getSocketArray(socket_t fd);
+
+
 }
