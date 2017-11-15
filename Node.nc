@@ -806,6 +806,24 @@ implementation{ // each node's private variables must be declared here, (or it w
 
 	}
 
+	void printSockets(){
+    int i;
+		socket_store_t socketTuple;
+
+		dbg (COMMAND_CHANNEL, "\n");
+		dbg (COMMAND_CHANNEL, "\n");
+		dbg (COMMAND_CHANNEL, "Node %hhu's sockets: \n", TOS_NODE_ID);
+
+
+
+    for(i = 0; i < 100; i++)
+    {
+			socketTuple = call Transport.getSocketArray(i);
+     dbg (COMMAND_CHANNEL, "socket: %hhu | Src address: %hhu  | Src port: %hhu  | Dest address: %hhu  | Dest port: %hhu\n", i, socketTuple.srcAddr,socketTuple.src,socketTuple.dest.addr, socketTuple.dest.port);
+		 	dbg (COMMAND_CHANNEL, "\n");
+    }
+  }
+
 	event void CommandHandler.setTestClient(uint16_t destination, uint8_t srcPort, uint8_t destPort, uint16_t transfer){
 
 		int i;
@@ -818,6 +836,7 @@ implementation{ // each node's private variables must be declared here, (or it w
     int ack;
 
 		dbg (COMMAND_CHANNEL, "Destination: %hhu, srcPort: %hhu, destPort: %hhu, transfer: %hhu\n", destination, srcPort, destPort, transfer);
+
 
 		ad.port = srcPort;
 		ad.addr = TOS_NODE_ID;
@@ -837,7 +856,7 @@ implementation{ // each node's private variables must be declared here, (or it w
 
 
     // create random sequence number to start
-    seq = Random.rand32();
+  //  seq = Random.rand32();
 
 		sendSYN (destination, srcPort, destPort);
 
@@ -854,10 +873,14 @@ implementation{ // each node's private variables must be declared here, (or it w
 		// call clientTimer.startPeriodic(2000);
 
 
+		printSockets();
+
 	}
 	event void CommandHandler.setClientClose(uint16_t destination, uint8_t srcPort, uint8_t destPort){
 		dbg (COMMAND_CHANNEL, "Destination: %hhu, srcPort: %hhu, destPort: %hhu\n", destination, srcPort, destPort);
 	}
+
+
 
 	event void CommandHandler.setAppServer(){}
 
