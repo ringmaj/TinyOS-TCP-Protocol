@@ -17,3 +17,9 @@ arm/*
 !arm/Makefile
 app.c
 sim.o
+
+*.so
+
+*.c
+
+*.o
