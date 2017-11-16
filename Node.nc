@@ -734,11 +734,21 @@ implementation{ // each node's private variables must be declared here, (or it w
 					
 					// check the payload flags to see if it's an SYN, SYN-ACK, ACK, FIN
 					switch (((uint8_t*)&(myMsg->payload))*) {
+						//sendTCP (uint8_t flags, uint16_t destination, uint8_t srcPort, uint8_t destPort, uint32_t seq, uint32_t ack)
 						case 0b10000000:	// SYN Packet
+							dbg (COMMAND_CHANNEL, "It's a SYN Packet. Sending back a SYN-ACK Packet\n");
+							//data[1] == srcPort;
+							//data[2] == destPort;
 							
+							//check if destPort is open. If dest
+							port = destPort, if destPort is open. Otherwise any other open port 
+							
+							sendTCP (0b11000000, myMsg->src, port, myMsg->payload[1], call Random.rand32(), myMsg->seq + 1)
 							break;
 						
 						case 0b01000000:	// ACK Packet
+							
+							// 
 							
 							break;
 						
