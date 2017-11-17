@@ -171,12 +171,16 @@ def main():
 
 
 	s.runTime(10);
-	s.cmdTestServer (1, 2);
+	s.cmdTestServer (2, 4);
 	s.runTime(10);
+	# s.cmdTestServer (1, 3);
+	# s.runTime(10);
+	# s.cmdTestServer (1, 4);
+	# s.runTime(10);
 	#s.cmdTestClient (1, 2, 1, 2);
-	s.cmdTestClient (1, 1, 2, 1, 2);
+	s.cmdTestClient (1, 2, 2, 4, 2);
 	s.runTime(10);
-	s.cmdClientClose (1, 2, 1, 2);
+	s.cmdClientClose (2, 2, 1, 2);
 	s.runTime(10);
 
 

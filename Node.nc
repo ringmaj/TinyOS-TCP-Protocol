@@ -98,20 +98,12 @@ implementation{ // each node's private variables must be declared here, (or it w
 
 		uint16_t forwardingTableNumNodes;
 
-	//} forwarding;
 
-
-
-
-
-	// Holds current nodes neighbors, each bit corresponds to a node, 1/0 bit if node is a neighbors
-	// Assume max number of nodes is 50, so 64 bits or 8 bytes can be sent in the payload
-
-	// Holds 64 bits or up to 64 nodes
-	//uint16_t neighborBits[4];
-
-
-
+		// Project 3
+		// Holds all of the ports that were already initialized by cmdTestServer
+		socket_port_t initializedPorts[100];
+		// Holds the index for the last port in initializedPorts array
+		uint16_t topPort = 0;
 
 	// Used in neighbor discovery
 	uint16_t neighbors [50];
@@ -261,7 +253,7 @@ implementation{ // each node's private variables must be declared here, (or it w
 		packsSent++;
 		mySeqNum++;
 	}
-	
+
 	void sendTCP (uint8_t flags, uint16_t destination, uint8_t srcPort, uint8_t destPort, uint32_t seq, uint32_t ack) {	// Establishes a TCP connection from the client to the server by sending an SYN Packet to the server
 		uint8_t data [PACKET_MAX_PAYLOAD_SIZE];
 		uint32_t * ptr = (uint32_t *)(&(data[3])); //reinterpretcast<uint32_t>();
@@ -269,33 +261,33 @@ implementation{ // each node's private variables must be declared here, (or it w
 		data[0] = flags;	//0b01000000;	// set the leftmost bit, to be the SYN flag. And the 2nd to leftmost bit to be the ACK flag
 		data[1] = srcPort;
 		data[2] = destPort;
-		
+
 		//dbg (COMMAND_CHANNEL, "seq num is:  %u\n", seq);
 		//dbg (COMMAND_CHANNEL, "seq num is: %x\n", seq);
-		
+
 		//memcpy ((uint32_t *)(&(data[2])), &seq, sizeof(seq));
 		memcpy (ptr, &seq, sizeof(seq));	// copy the TCP seq # into the packet
-		
+
 		//dbg (COMMAND_CHANNEL, "TCP seq written in payload is:  %u\n", *ptr);
 		//dbg (COMMAND_CHANNEL, "TCP seq written in payload is: %x\n", *ptr);
-		
+
 		memcpy ((ptr + 1), &ack, sizeof(ack)); 	// copy the TCP ack # into the packet
-		
+
 		makePack (&sendPackage, TOS_NODE_ID, destination, 21, PROTOCOL_TCP, mySeqNum, data, PACKET_MAX_PAYLOAD_SIZE);
 		dbg(COMMAND_CHANNEL, "Src: %hhu Dest: %hhu Seq: %hhu TTL: %hhu Protocol: %hhu	Payload:(flag: %x, srcPort: %hhu, destPort: %hhu, TCPSeqNum:  %u, TCPAckNum:  %u)\n", sendPackage.payload[0], sendPackage.src, sendPackage.dest, sendPackage.seq, sendPackage.TTL, sendPackage.protocol, sendPackage.payload[1], sendPackage.payload[2], *((uint32_t *)(&(sendPackage.payload[3]))), *((uint32_t *)(&(sendPackage.payload[3])) + 1));
 		call Sender.send (sendPackage, forwardingTableNext[destination]);
 		sentPacks[packsSent%50] = (((sendPackage.seq) << 16) | sendPackage.src);	// keep track of all packs send so as not to send them twice
 		packsSent++;
 		mySeqNum++;
-		
-		
+
+
 		// prints payload in hex (uses little endian)
 		//for (seq = 0; seq < PACKET_MAX_PAYLOAD_SIZE; seq++) {
 		//	dbg (COMMAND_CHANNEL, "%.2x\n", sendPackage.payload[seq]);
 		//}
-		
+
 	}
-	
+
 	/*
 	void sendSYN (uint16_t destination, uint8_t srcPort, uint8_t destPort, uint32_t seq) {	// Establishes a TCP connection from the client to the server by sending an SYN Packet to the server
 		uint8_t data [PACKET_MAX_PAYLOAD_SIZE];
@@ -304,31 +296,31 @@ implementation{ // each node's private variables must be declared here, (or it w
 		data[0] = 0b10000000;	// set the leftmost bit, to be the SYN flag.
 		data[1] = srcPort;
 		data[2] = destPort;
-		
+
 		//dbg (COMMAND_CHANNEL, "seq num is:  %u\n", seq);
 		//dbg (COMMAND_CHANNEL, "seq num is: %x\n", seq);
-		
+
 		//memcpy ((uint32_t *)(&(data[2])), &seq, sizeof(seq));
 		memcpy (ptr, &seq, sizeof(seq));	// copy the TCP seq # into the packet
-		
+
 		//dbg (COMMAND_CHANNEL, "TCP seq written in payload is:  %u\n", *ptr);
 		//dbg (COMMAND_CHANNEL, "TCP seq written in payload is: %x\n", *ptr);
-		
-		
+
+
 		makePack (&sendPackage, TOS_NODE_ID, destination, 21, PROTOCOL_TCP, mySeqNum, data, PACKET_MAX_PAYLOAD_SIZE);
 		dbg(COMMAND_CHANNEL, "Src: %hhu Dest: %hhu Seq: %hhu TTL: %hhu Protocol: %hhu	Payload:(flag: %x, srcPort: %hhu, destPort: %hhu, TCPSeqNum:  %u)\n", sendPackage.payload[0], sendPackage.src, sendPackage.dest, sendPackage.seq, sendPackage.TTL, sendPackage.protocol, sendPackage.payload[1], sendPackage.payload[2], *((uint32_t *)(&(sendPackage.payload[3]))));
 		call Sender.send (sendPackage, forwardingTableNext[destination]);
 		sentPacks[packsSent%50] = (((sendPackage.seq) << 16) | sendPackage.src);	// keep track of all packs send so as not to send them twice
 		packsSent++;
 		mySeqNum++;
-		
+
 		// prints payload in hex (uses little endian)
 		//for (seq = 0; seq < PACKET_MAX_PAYLOAD_SIZE; seq++) {
 		//	dbg (COMMAND_CHANNEL, "%.2x\n", sendPackage.payload[seq]);
 		//}
-		
+
 	}
-	
+
 	void sendSynAck (uint16_t destination, uint8_t srcPort, uint8_t destPort, uint32_t seq, uint32_t ack) {	// Establishes a TCP connection from the client to the server by sending an SYN Packet to the server
 		uint8_t data [PACKET_MAX_PAYLOAD_SIZE];
 		uint32_t * ptr = (uint32_t *)(&(data[3])); //reinterpretcast<uint32_t>();
@@ -336,33 +328,33 @@ implementation{ // each node's private variables must be declared here, (or it w
 		data[0] = 0b11000000;	// set the leftmost bit, to be the SYN flag. And the 2nd to leftmost bit to be the ACK flag
 		data[1] = srcPort;
 		data[2] = destPort;
-		
+
 		//dbg (COMMAND_CHANNEL, "seq num is:  %u\n", seq);
 		//dbg (COMMAND_CHANNEL, "seq num is: %x\n", seq);
-		
+
 		//memcpy ((uint32_t *)(&(data[2])), &seq, sizeof(seq));
 		memcpy (ptr, &seq, sizeof(seq));	// copy the TCP seq # into the packet
-		
+
 		//dbg (COMMAND_CHANNEL, "TCP seq written in payload is:  %u\n", *ptr);
 		//dbg (COMMAND_CHANNEL, "TCP seq written in payload is: %x\n", *ptr);
-		
+
 		memcpy ((ptr + 1), &ack, sizeof(ack)); 	// copy the TCP ack # into the packet
-		
+
 		makePack (&sendPackage, TOS_NODE_ID, destination, 21, PROTOCOL_TCP, mySeqNum, data, PACKET_MAX_PAYLOAD_SIZE);
 		dbg(COMMAND_CHANNEL, "Src: %hhu Dest: %hhu Seq: %hhu TTL: %hhu Protocol: %hhu	Payload:(flag: %x, srcPort: %hhu, destPort: %hhu, TCPSeqNum:  %u, TCPAckNum:  %u)\n", sendPackage.payload[0], sendPackage.src, sendPackage.dest, sendPackage.seq, sendPackage.TTL, sendPackage.protocol, sendPackage.payload[1], sendPackage.payload[2], *((uint32_t *)(&(sendPackage.payload[3]))), *((uint32_t *)(&(sendPackage.payload[3])) + 1));
 		call Sender.send (sendPackage, forwardingTableNext[destination]);
 		sentPacks[packsSent%50] = (((sendPackage.seq) << 16) | sendPackage.src);	// keep track of all packs send so as not to send them twice
 		packsSent++;
 		mySeqNum++;
-		
-		
+
+
 		// prints payload in hex (uses little endian)
 		//for (seq = 0; seq < PACKET_MAX_PAYLOAD_SIZE; seq++) {
 		//	dbg (COMMAND_CHANNEL, "%.2x\n", sendPackage.payload[seq]);
 		//}
-		
+
 	}
-	
+
 	void sendAck (uint16_t destination, uint8_t srcPort, uint8_t destPort, uint32_t seq, uint32_t ack) {	// Establishes a TCP connection from the client to the server by sending an SYN Packet to the server
 		uint8_t data [PACKET_MAX_PAYLOAD_SIZE];
 		uint32_t * ptr = (uint32_t *)(&(data[3])); //reinterpretcast<uint32_t>();
@@ -370,35 +362,35 @@ implementation{ // each node's private variables must be declared here, (or it w
 		data[0] = 0b01000000;	// set the leftmost bit, to be the SYN flag. And the 2nd to leftmost bit to be the ACK flag
 		data[1] = srcPort;
 		data[2] = destPort;
-		
+
 		//dbg (COMMAND_CHANNEL, "seq num is:  %u\n", seq);
 		//dbg (COMMAND_CHANNEL, "seq num is: %x\n", seq);
-		
+
 		//memcpy ((uint32_t *)(&(data[2])), &seq, sizeof(seq));
 		memcpy (ptr, &seq, sizeof(seq));	// copy the TCP seq # into the packet
-		
+
 		//dbg (COMMAND_CHANNEL, "TCP seq written in payload is:  %u\n", *ptr);
 		//dbg (COMMAND_CHANNEL, "TCP seq written in payload is: %x\n", *ptr);
-		
+
 		memcpy ((ptr + 1), &ack, sizeof(ack)); 	// copy the TCP ack # into the packet
-		
+
 		makePack (&sendPackage, TOS_NODE_ID, destination, 21, PROTOCOL_TCP, mySeqNum, data, PACKET_MAX_PAYLOAD_SIZE);
 		dbg(COMMAND_CHANNEL, "Src: %hhu Dest: %hhu Seq: %hhu TTL: %hhu Protocol: %hhu	Payload:(flag: %x, srcPort: %hhu, destPort: %hhu, TCPSeqNum:  %u, TCPAckNum:  %u)\n", sendPackage.payload[0], sendPackage.src, sendPackage.dest, sendPackage.seq, sendPackage.TTL, sendPackage.protocol, sendPackage.payload[1], sendPackage.payload[2], *((uint32_t *)(&(sendPackage.payload[3]))), *((uint32_t *)(&(sendPackage.payload[3])) + 1));
 		call Sender.send (sendPackage, forwardingTableNext[destination]);
 		sentPacks[packsSent%50] = (((sendPackage.seq) << 16) | sendPackage.src);	// keep track of all packs send so as not to send them twice
 		packsSent++;
 		mySeqNum++;
-		
-		
+
+
 		// prints payload in hex (uses little endian)
 		//for (seq = 0; seq < PACKET_MAX_PAYLOAD_SIZE; seq++) {
 		//	dbg (COMMAND_CHANNEL, "%.2x\n", sendPackage.payload[seq]);
 		//}
-		
+
 	}
 	*/
-	
-	
+
+
 	void printNeighbors (char channel []) {
 		int i;
 		dbg (channel, "My %hhu neighbor(s) are:\n", top);
@@ -718,7 +710,7 @@ implementation{ // each node's private variables must be declared here, (or it w
 					logPack (myMsg);
 					return msg;
 				}
-				
+
 				if (myMsg->protocol == PROTOCOL_PING) {
 					dbg (COMMAND_CHANNEL, "The message is for me!\n");
 					logPack (myMsg);
@@ -726,49 +718,76 @@ implementation{ // each node's private variables must be declared here, (or it w
 					// send reply
 					reply(myMsg->src);
 				}
-				
+
 				if (myMsg->protocol == PROTOCOL_TCP) {// Handle TCP here
+					dbg(COMMAND_CHANNEL, "\n\n");
 					dbg (COMMAND_CHANNEL, "The TCP message is for me!!!\n");
 					//logPack (myMsg);
 					logPack_command (myMsg);
-					
+
 					// check the payload flags to see if it's an SYN, SYN-ACK, ACK, FIN
-					switch (((uint8_t*)&(myMsg->payload))*) {
+					switch (myMsg->payload[0]) {
 						//sendTCP (uint8_t flags, uint16_t destination, uint8_t srcPort, uint8_t destPort, uint32_t seq, uint32_t ack)
+						bool portInitialized = FALSE;
+
 						case 0b10000000:	// SYN Packet
-							dbg (COMMAND_CHANNEL, "It's a SYN Packet. Sending back a SYN-ACK Packet\n");
+							dbg (COMMAND_CHANNEL, "Received a SYN Packet\n");
 							//data[1] == srcPort;
 							//data[2] == destPort;
-							
-							//check if destPort is open. If dest
-							port = destPort, if destPort is open. Otherwise any other open port 
-							
-							sendTCP (0b11000000, myMsg->src, port, myMsg->payload[1], call Random.rand32(), myMsg->seq + 1)
+
+							//check if destPort has already been initialized by the server
+							//portInitialized = FALSE;
+							dbg(COMMAND_CHANNEL, "Initialized Ports: %hhu\n", topPort);
+
+							for(i = 0; i < topPort; i++)
+							{
+								//dbg (COMMAND_CHANNEL, "Port %hhu = Port %hhu\n", initializedPorts[i], myMsg->payload[2]);
+
+								if(initializedPorts[i] == myMsg->payload[2])
+								{
+									portInitialized = TRUE;
+									dbg (COMMAND_CHANNEL, "\n");
+									dbg (COMMAND_CHANNEL, "HANDSHAKE (2/3)\n");
+									dbg (COMMAND_CHANNEL, "Port %hhu is a valid port and it's a SYN Packet.\n", myMsg->payload[2]);
+									dbg (COMMAND_CHANNEL, "Sending SYN-ACK packet from |Node: %hhu port %hhu| ---> |Node: %hhu port %hhu| \n", TOS_NODE_ID, myMsg->payload[2], myMsg->src, myMsg->payload[1]);
+									sendTCP (0b11000000, myMsg->src, myMsg->payload[2], myMsg->payload[1], 0, myMsg->seq + 1);
+								}
+							}
+
+							//port = destPort, if destPort is open. Otherwise any other open port
+
+							//sendTCP (0b11000000, myMsg->src, port, myMsg->payload[1], call Random.rand32(), myMsg->seq + 1)
 							break;
-						
+
 						case 0b01000000:	// ACK Packet
-							
-							// 
-							
+
+
 							break;
-						
+
 						case 0b11000000:	// SYN-ACK Packet
-						
+							dbg (COMMAND_CHANNEL, "\n");
+							dbg (COMMAND_CHANNEL, "HANDSHAKE (3/3)\n");
+							dbg (COMMAND_CHANNEL, "Received a SYN-ACK packet\n");
+							dbg (COMMAND_CHANNEL, "Sending ACK packet from |Node: %hhu port %hhu| ---> |Node: %hhu port %hhu| \n", TOS_NODE_ID, myMsg->payload[2], myMsg->src, myMsg->payload[1]);
+							sendTCP (0b01000000, myMsg->src, myMsg->payload[2], myMsg->payload[1], call Random.rand32(), myMsg->seq + 1);
+
+
+
 							break;
-						
+
 						case 0b00100000:	// FIN Packet
-							
+
 							break;
-						
+
 						case 0b01010000:	// data (with ACK)
-							
+
 							break;
 						default:		// data packet???
-						
+
 					}
-					
+
 				}
-					
+
 			}
 
 		} else if (myMsg->TTL > 0 && myMsg->src != TOS_NODE_ID) {	// should also check that this packet wasn't already forwarded by this node (store a list of packets already forwarded in a hashmap or a list)
@@ -953,8 +972,26 @@ implementation{ // each node's private variables must be declared here, (or it w
 		// function to check if client tries connections
 		// accept()
 
+		// add port to initialized ports array
+		initializedPorts[topPort] = port;
+		topPort++;
+
+
+		/*dbg(COMMAND_CHANNEL, "Port: %hhu\n", port);
+
+		dbg(COMMAND_CHANNEL, "Number of accepted ports: %hhu\n", topPort);
+		dbg(COMMAND_CHANNEL, "port 0: %hhu\n", initializedPorts[0]);
+		dbg(COMMAND_CHANNEL, "port 1: %hhu\n", initializedPorts[1]);
+		dbg(COMMAND_CHANNEL, "port 2: %hhu\n", initializedPorts[2]);*/
+
+
+		dbg(COMMAND_CHANNEL, "\n");
+
+
+
 		// timer to attempt connections
 		call serverTimer.startPeriodic(2000);
+
 
 
 
@@ -1023,21 +1060,37 @@ implementation{ // each node's private variables must be declared here, (or it w
 		// try to make a connection with the server
 		// call Transport.connect(fd, addr);
 
+		// send syn packet to node
+		//sendTCP (uint8_t flags, uint16_t destination, uint8_t srcPort, uint8_t destPort, uint32_t seq, uint32_t ack)
+
+		// add port to initialized ports array
+		initializedPorts[topPort] = srcPort;
+		topPort++;
+
+
 
     // create random sequence number to start
-		seq = call Random.rand32();
-		
-		/*
-		dbg (COMMAND_CHANNEL, "Sending SYN packet from port %hhu to node %hhu at port %hhu \n", srcPort, destination, destPort);
+		//seq = call Random.rand32();
+		// set seq as 0 for now so debugging the seq's and ack's is easier
+		seq = 0;
+
+		//dbg(COMMAND_CHANNEL, "SEQ NUMBER: %hhu\n", seq);
+
+		dbg (COMMAND_CHANNEL, "\n");
+		dbg (COMMAND_CHANNEL, "HANDSHAKE (1/3)\n");
+		dbg (COMMAND_CHANNEL, "Sending SYN packet from |Node: %hhu port %hhu| ---> |Node: %hhu port %hhu| \n", TOS_NODE_ID, srcPort, destination, destPort);
 		sendTCP (0b10000000, destination, srcPort, destPort, seq, 0);	// SYN
-		
-		
-		dbg (COMMAND_CHANNEL, "Sending Syn-Ack packet from port %hhu to node %hhu at port %hhu \n", srcPort, destination, destPort);
+
+		dbg(COMMAND_CHANNEL, "\n");
+
+
+
+		/*dbg (COMMAND_CHANNEL, "Sending Syn-Ack packet from port %hhu to node %hhu at port %hhu \n", srcPort, destination, destPort);
 		sendTCP (0b01000000, destination, srcPort, destPort, seq, seq + 1);	// SYNACK
-		
+
 		dbg (COMMAND_CHANNEL, "Sending Ack packet from port %hhu to node %hhu at port %hhu \n", srcPort, destination, destPort);
-		sendTCP (0b11000000, destination, srcPort, destPort, seq, seq + 1);	// ACK
-		*/
+		sendTCP (0b11000000, destination, srcPort, destPort, seq, seq + 1);	// ACK*/
+
 		//sendSYN (destination, srcPort, destPort, seq);
 		//sendSynAck (destination, srcPort, destPort, seq, seq + 1);
 		//sendAck (destination, srcPort, destPort)
@@ -1054,7 +1107,7 @@ implementation{ // each node's private variables must be declared here, (or it w
 		// call clientTimer.startPeriodic(2000);
 
 
-		printSockets();
+		//printSockets();
 
 	}
 	event void CommandHandler.setClientClose(uint16_t destination, uint8_t srcPort, uint8_t destPort){
