@@ -574,6 +574,42 @@ implementation{ // each node's private variables must be declared here, (or it w
 	}
 
 
+void line()
+{
+	dbg(COMMAND_CHANNEL, "---------------------------------------------------------------------\n");
+}
+
+void printSockets(){
+	int i;
+	socket_store_t socketTuple;
+	bool areSockets = FALSE;
+
+	dbg (COMMAND_CHANNEL, "\n");
+	dbg (COMMAND_CHANNEL, "\n");
+	dbg (COMMAND_CHANNEL, "Node %hhu's sockets: \n", TOS_NODE_ID);
+
+
+
+	for(i = 0; i < 100; i++)
+	{
+		socketTuple = call Transport.getSocketArray(i);
+		if(socketTuple.fd != NULL)
+		{
+			areSockets = TRUE;
+			line();
+			dbg (COMMAND_CHANNEL, "socket: %hhu | Src address: %hhu  | Src port: %hhu  | Dest address: %hhu  | Dest port: %hhu\n", i, socketTuple.srcAddr,socketTuple.src,socketTuple.dest.addr, socketTuple.dest.port);
+			//dbg (COMMAND_CHANNEL, "\n");
+			line();
+		}
+
+	}
+
+	if(areSockets == FALSE)
+	dbg (COMMAND_CHANNEL, "...\n");
+
+	dbg (COMMAND_CHANNEL, "\n");
+	dbg (COMMAND_CHANNEL, "\n");
+}
 
 
 	event void Boot.booted(){
@@ -720,7 +756,7 @@ implementation{ // each node's private variables must be declared here, (or it w
 				}
 
 				if (myMsg->protocol == PROTOCOL_TCP) {// Handle TCP here
-					dbg(COMMAND_CHANNEL, "\n\n");
+					line();
 					dbg (COMMAND_CHANNEL, "The TCP message is for me!!!\n");
 					//logPack (myMsg);
 					logPack_command (myMsg);
@@ -746,7 +782,8 @@ implementation{ // each node's private variables must be declared here, (or it w
 								if(initializedPorts[i] == myMsg->payload[2])
 								{
 									portInitialized = TRUE;
-									dbg (COMMAND_CHANNEL, "\n");
+									line();
+									printSockets();
 									dbg (COMMAND_CHANNEL, "HANDSHAKE (2/3)\n");
 									dbg (COMMAND_CHANNEL, "Port %hhu is a valid port and it's a SYN Packet.\n", myMsg->payload[2]);
 									dbg (COMMAND_CHANNEL, "Sending SYN-ACK packet from |Node: %hhu port %hhu| ---> |Node: %hhu port %hhu| \n", TOS_NODE_ID, myMsg->payload[2], myMsg->src, myMsg->payload[1]);
@@ -765,7 +802,7 @@ implementation{ // each node's private variables must be declared here, (or it w
 							break;
 
 						case 0b11000000:	// SYN-ACK Packet
-							dbg (COMMAND_CHANNEL, "\n");
+							line();
 							dbg (COMMAND_CHANNEL, "HANDSHAKE (3/3)\n");
 							dbg (COMMAND_CHANNEL, "Received a SYN-ACK packet\n");
 							dbg (COMMAND_CHANNEL, "Sending ACK packet from |Node: %hhu port %hhu| ---> |Node: %hhu port %hhu| \n", TOS_NODE_ID, myMsg->payload[2], myMsg->src, myMsg->payload[1]);
@@ -1012,23 +1049,7 @@ implementation{ // each node's private variables must be declared here, (or it w
 
 	}
 
-	void printSockets(){
-    int i;
-		socket_store_t socketTuple;
 
-		dbg (COMMAND_CHANNEL, "\n");
-		dbg (COMMAND_CHANNEL, "\n");
-		dbg (COMMAND_CHANNEL, "Node %hhu's sockets: \n", TOS_NODE_ID);
-
-
-
-    for(i = 0; i < 100; i++)
-    {
-			socketTuple = call Transport.getSocketArray(i);
-     dbg (COMMAND_CHANNEL, "socket: %hhu | Src address: %hhu  | Src port: %hhu  | Dest address: %hhu  | Dest port: %hhu\n", i, socketTuple.srcAddr,socketTuple.src,socketTuple.dest.addr, socketTuple.dest.port);
-		 	dbg (COMMAND_CHANNEL, "\n");
-    }
-  }
 
 	event void CommandHandler.setTestClient(uint16_t destination, uint8_t srcPort, uint8_t destPort, uint16_t transfer){
 
@@ -1076,13 +1097,11 @@ implementation{ // each node's private variables must be declared here, (or it w
 
 		//dbg(COMMAND_CHANNEL, "SEQ NUMBER: %hhu\n", seq);
 
-		dbg (COMMAND_CHANNEL, "\n");
+		line();
 		dbg (COMMAND_CHANNEL, "HANDSHAKE (1/3)\n");
 		dbg (COMMAND_CHANNEL, "Sending SYN packet from |Node: %hhu port %hhu| ---> |Node: %hhu port %hhu| \n", TOS_NODE_ID, srcPort, destination, destPort);
+		printSockets();
 		sendTCP (0b10000000, destination, srcPort, destPort, seq, 0);	// SYN
-
-		dbg(COMMAND_CHANNEL, "\n");
-
 
 
 		/*dbg (COMMAND_CHANNEL, "Sending Syn-Ack packet from port %hhu to node %hhu at port %hhu \n", srcPort, destination, destPort);
