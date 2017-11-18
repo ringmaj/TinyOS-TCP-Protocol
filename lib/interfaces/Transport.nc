@@ -147,5 +147,7 @@ interface Transport{
 
    command socket_store_t getSocketArray(socket_t fd);
 
+   command void updateSocketArray(socket_t fd, socket_store_t * socket);
+
 
 }
