@@ -244,7 +244,7 @@ implementation{ // each node's private variables must be declared here, (or it w
 		//logPack(&sendPackage);
 		dbg(GENERAL_CHANNEL, "Src: %hhu Dest: %hhu Seq: %hhu TTL: %hhu Protocol: %hhu	Payload:\n", sendPackage.src, sendPackage.dest, sendPackage.seq, sendPackage.TTL, sendPackage.protocol);
 		// is this an incompatible pointer type???????????
-		printLSP(sendPackage.payload, GENERAL_CHANNEL);
+		printLSP((uint8_t *)(sendPackage.payload), GENERAL_CHANNEL);
 		// Update my own Routing table with my own LSP
 		readLinkStatePack (&(routingTableNeighborArray[sendPackage.src - 1][0]), (uint8_t *)(sendPackage.payload));
 		routingTableNumNodes++;
@@ -403,7 +403,7 @@ implementation{ // each node's private variables must be declared here, (or it w
 
 	void reply (uint16_t to) {
 		char text [] = "got it!\n";
-		makePack(&sendPackage, TOS_NODE_ID, to, 21, PROTOCOL_PINGREPLY, mySeqNum, text, PACKET_MAX_PAYLOAD_SIZE);
+		makePack(&sendPackage, TOS_NODE_ID, to, 21, PROTOCOL_PINGREPLY, mySeqNum, (uint8_t *)text, PACKET_MAX_PAYLOAD_SIZE);
 		dbg(GENERAL_CHANNEL, "Sending reply to %hhu", to);
 		logPack(&sendPackage);
 		//call Sender.send(sendPackage, AM_BROADCAST_ADDR);	// AM_BROADCAST_ADDR is only used for flooding and neighbor discovery
@@ -685,7 +685,7 @@ void printSockets(){
 	}
 
 	event void serverTimer.fired () {
-
+		
 	}
 
 	event void clientTimer.fired () {
@@ -769,8 +769,8 @@ void printSockets(){
 						socket_t fd;
 						socket_addr_t address;
 						socket_addr_t * addr;
-
-
+						
+						
 						case 0b10000000:	// SYN Packet
 							dbg (COMMAND_CHANNEL, "Received a SYN Packet\n");
 							//data[1] == srcPort;
@@ -871,11 +871,11 @@ void printSockets(){
 							break;
 
 						case 0b00100000:	// FIN Packet
-
+							dbg (COMMAND_CHANNEL, "Received a FIN packet\n");
 							break;
 
 						case 0b01010000:	// data (with ACK)
-
+							dbg (COMMAND_CHANNEL, "Received a Data packet with and ACK\n");
 							break;
 						default:		// data packet???
 
@@ -945,7 +945,7 @@ void printSockets(){
 				if (myMsg->src == TOS_NODE_ID) {
 					dbg (ROUTING_CHANNEL, "Recieved my own LSP\n");
 					dbg(ROUTING_CHANNEL, "Src: %hhu Dest: %hhu Seq: %hhu TTL: %hhu Protocol: %hhu	Payload:\n", myMsg->src, myMsg->dest, myMsg->seq, myMsg->TTL, myMsg->protocol);
-					printLSP(myMsg->payload, ROUTING_CHANNEL);
+					printLSP((uint8_t *)(myMsg->payload), ROUTING_CHANNEL);
 					return msg;
 				}
 
@@ -955,7 +955,7 @@ void printSockets(){
 				//arr [PACKET_MAX_PAYLOAD_SIZE * 8];
 				dbg (ROUTING_CHANNEL, "Recieved %hhu's linkState packet!!!\n", myMsg->src);
 				dbg(ROUTING_CHANNEL, "Src: %hhu Dest: %hhu Seq: %hhu TTL: %hhu Protocol: %hhu	Payload:\n", myMsg->src, myMsg->dest, myMsg->seq, myMsg->TTL, myMsg->protocol);
-				printLSP(myMsg->payload, ROUTING_CHANNEL);
+				printLSP((uint8_t *)(myMsg->payload), ROUTING_CHANNEL);
 
 				// copy the myMsg->src's neighbor list from payload to the myMsg->src's row in routingTableNeighborArray
 				//readLinkStatePack (uint8_t * arrayTo, uint8_t * payloadFrom)
@@ -1050,7 +1050,7 @@ void printSockets(){
 	/*event void CommandHandler.setTestServer(uint16_t address, uint8_t port){*/
 	event void CommandHandler.setTestServer(uint8_t port){
 
-		int i;
+		//int i;
 		socket_addr_t ad;
 		socket_addr_t * addr;
 		socket_t fd;
@@ -1187,8 +1187,52 @@ void printSockets(){
 		//printSockets();
 
 	}
+	
+	//void sendTCP (uint8_t flags, uint16_t destination, uint8_t srcPort, uint8_t destPort, uint32_t seq, uint32_t ack)
+	
 	event void CommandHandler.setClientClose(uint16_t destination, uint8_t srcPort, uint8_t destPort){
+		
+		int i;
+		//uint32_t seqNum;
+		//uint32_t ackNum;
+		socket_store_t toClose;
+		
 		dbg (COMMAND_CHANNEL, "Destination: %hhu, srcPort: %hhu, destPort: %hhu\n", destination, srcPort, destPort);
+		/*
+		for (i = 0; i < 100; i++) {
+			toClose = call Transport.getSocketArray(i);
+			if ((toClose.fd != 0) && (toClose.dest.addr == destination) && (toClose.dest.port == destPort) && (toClose.src == srcPort)) {
+				dbg (COMMAND_CHANNEL, "Found the socket to close. Closing it\n");
+				
+				// Do everything neccesary to close this socket (so it could be used later)
+				toClose.fd = 255;
+				
+				// set seq and ack number (to send the FIN packet)
+				//seqNum = toClose.seq;
+				//ackNum = toClose.ack;
+				break;
+			}
+			
+		}
+		if (i == 100) {	// could also do check if (toClose == NULL) ???? more readable????
+			dbg (COMMAND_CHANNEL, "Could not find socket with this destAddress, destPort, and srcPort\n");
+			return;
+		}
+		
+		*/
+		
+		
+		// look up seq and ack number
+		dbg (COMMAND_CHANNEL, "Sending FIN pack to node %hu (port %hhu)\n", destination, destPort);
+		// send FIN packet to server (sort of a promise not to send any more data to server, but can still send ACKS and FIN's to server. But still mest be prepared to recieve data)
+		sendTCP (0b00100000, destination, srcPort, destPort, toClose.seq, toClose.ack);
+		
+		
+		// Wait to get ACK from server of this FIN
+		
+		
+		// Wait for server to send it's last FIN (to know that the server is not sending more data)
+		
 	}
 
 
