@@ -36,6 +36,11 @@ implementation{
     return socketArray[fd];
   }
 
+  command void Transport.updateSocketArray(socket_t fd, socket_store_t * socket){
+    socketArray[fd] = *(socket);
+  }
+
+
    command socket_t Transport.socket()
   {
 
@@ -139,6 +144,21 @@ implementation{
 
   command error_t Transport.connect(socket_t fd, socket_addr_t * addr){
 
+    int i;
+    bool availableSocket = FALSE;
+
+    for(i = 0; i < 100; i++)
+    {
+      if(socketArray[i].fd == NULL)
+      {
+        availableSocket = TRUE;
+      }
+    }
+
+    if(availableSocket == TRUE)
+      return SUCCESS;
+    else
+      return FAIL;
   }
 
   command error_t Transport.close(socket_t fd){
