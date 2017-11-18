@@ -765,6 +765,11 @@ void printSockets(){
 					switch (myMsg->payload[0]) {
 						//sendTCP (uint8_t flags, uint16_t destination, uint8_t srcPort, uint8_t destPort, uint32_t seq, uint32_t ack)
 						bool portInitialized = FALSE;
+						socket_store_t socketTuple;
+						socket_t fd;
+						socket_addr_t address;
+						socket_addr_t * addr;
+
 
 						case 0b10000000:	// SYN Packet
 							dbg (COMMAND_CHANNEL, "Received a SYN Packet\n");
@@ -778,17 +783,70 @@ void printSockets(){
 							for(i = 0; i < topPort; i++)
 							{
 								//dbg (COMMAND_CHANNEL, "Port %hhu = Port %hhu\n", initializedPorts[i], myMsg->payload[2]);
-
 								if(initializedPorts[i] == myMsg->payload[2])
-								{
 									portInitialized = TRUE;
+							}
+
+							if(portInitialized == TRUE)
+							{
+								line();
+								printSockets();
+								dbg (COMMAND_CHANNEL, "HANDSHAKE (2/3)\n");
+								dbg (COMMAND_CHANNEL, "Port %hhu is a valid port and it's a SYN Packet.\n", myMsg->payload[2]);
+								dbg (COMMAND_CHANNEL, "Sending SYN-ACK packet from |Node: %hhu port %hhu| ---> |Node: %hhu port %hhu| \n", TOS_NODE_ID, myMsg->payload[2], myMsg->src, myMsg->payload[1]);
+
+								// setup socket in socketArray
+								 fd = 0;
+								address.port = myMsg->payload[2];
+								address.addr = myMsg->src;
+								addr = & address;
+
+
+								if(call Transport.connect(fd,  addr) == SUCCESS)
+								{
+									dbg(COMMAND_CHANNEL, "\n");
 									line();
-									printSockets();
-									dbg (COMMAND_CHANNEL, "HANDSHAKE (2/3)\n");
-									dbg (COMMAND_CHANNEL, "Port %hhu is a valid port and it's a SYN Packet.\n", myMsg->payload[2]);
-									dbg (COMMAND_CHANNEL, "Sending SYN-ACK packet from |Node: %hhu port %hhu| ---> |Node: %hhu port %hhu| \n", TOS_NODE_ID, myMsg->payload[2], myMsg->src, myMsg->payload[1]);
-									sendTCP (0b11000000, myMsg->src, myMsg->payload[2], myMsg->payload[1], 0, myMsg->seq + 1);
+									dbg(COMMAND_CHANNEL, "Made a connection on the server side socket\n");
+									line();
+									dbg(COMMAND_CHANNEL, "\n");
+
+									// find empty socket and fill in with right values for new connection
+
+									for(i = 0; i < 100; i++)
+									{
+										socketTuple = call Transport.getSocketArray(i);
+										socketTuple.srcAddr = 500;
+										socketTuple.dest.port = 255;
+										call Transport.updateSocketArray(i,&socketTuple);
+									}
+
+									for(i = 0; i < 100; i++)
+									{
+										socketTuple = call Transport.getSocketArray(i);
+										if(socketTuple.fd == NULL){
+											socketTuple.fd = i;
+
+											socketTuple.dest.addr = myMsg->src;
+											socketTuple.dest.port = myMsg->payload[1];
+
+
+
+
+
+											dbg(COMMAND_CHANNEL, "Found empty socket! Socket #: %hhu\n", socketTuple.fd);
+
+											printSockets();
+											break;
+										}
+
+
+									}
+
+
+
 								}
+
+								sendTCP (0b11000000, myMsg->src, myMsg->payload[2], myMsg->payload[1], 0, myMsg->seq + 1);
 							}
 
 							//port = destPort, if destPort is open. Otherwise any other open port
