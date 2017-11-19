@@ -254,24 +254,36 @@ implementation{ // each node's private variables must be declared here, (or it w
 		mySeqNum++;
 	}
 
-	void sendTCP (uint8_t flags, uint16_t destination, uint8_t srcPort, uint8_t destPort, uint32_t seq, uint32_t ack) {	// Establishes a TCP connection from the client to the server by sending an SYN Packet to the server
-		uint8_t data [PACKET_MAX_PAYLOAD_SIZE];
-		uint32_t * ptr = (uint32_t *)(&(data[3])); //reinterpretcast<uint32_t>();
+	void sendTCP (uint8_t flags, uint16_t destination, uint8_t srcPort, uint8_t destPort, uint32_t seq, uint32_t ack, uint8_t* TCPData, uint8_t dataLength) {	// Establishes a TCP connection from the client to the server by sending an SYN Packet to the server
+		uint8_t payloadArr [PACKET_MAX_PAYLOAD_SIZE];
+		uint32_t * ptr = (uint32_t *)(&(payloadArr[3])); //reinterpretcast<uint32_t>();
 		//dbg (COMMAND_CHANNEL, "Sending Ack packet from port %hhu to node %hhu at port %hhu \n", srcPort, destination, destPort);
-		data[0] = flags;	//0b01000000;	// set the leftmost bit, to be the SYN flag. And the 2nd to leftmost bit to be the ACK flag
-		data[1] = srcPort;
-		data[2] = destPort;
+		payloadArr[0] = flags;	// (uses 1 byte) set the leftmost bit, to be the SYN flag. And the 2nd to leftmost bit to be the ACK flag
+		payloadArr[1] = srcPort;	// (uses 1 byte)
+		payloadArr[2] = destPort;	// (uses 1 byte)
 
 		//dbg (COMMAND_CHANNEL, "seq num is:  %u\n", seq);
 		//dbg (COMMAND_CHANNEL, "seq num is: %x\n", seq);
 
-		//memcpy ((uint32_t *)(&(data[2])), &seq, sizeof(seq));
-		memcpy (ptr, &seq, sizeof(seq));	// copy the TCP seq # into the packet
+		//memcpy ((uint32_t *)(&(payloadArr[2])), &seq, sizeof(seq));
+		memcpy (ptr, &seq, sizeof(seq));	// (uses 4 bytes) copy the TCP seq # into the packet
 
 		//dbg (COMMAND_CHANNEL, "TCP seq written in payload is:  %u\n", *ptr);
 		//dbg (COMMAND_CHANNEL, "TCP seq written in payload is: %x\n", *ptr);
 
-		memcpy ((ptr + 1), &ack, sizeof(ack)); 	// copy the TCP ack # into the packet
+		memcpy ((ptr + 1), &ack, sizeof(ack));	// (uses 4 bytes) copy the TCP ack # into the packet
+		
+		// Send additional data in this TCP pack
+		if (TCPData != NULL && dataLength != 0) {
+			// Payload size is only 20 bytes (PACKET_MAX_PAYLOAD_SIZE). We already used 1 bytes for flags, 1 for srcPort, 1 for destPort, 4 for seq, 4 for ack. So we used 11 bytes, and so we only have 20 - 11 = 9 bytes left
+			if (dataLength > PACKET_MAX_PAYLOAD_SIZE - 11) {
+				dataLength = PACKET_MAX_PAYLOAD_SIZE - 11;	// 11 is the number of bytes used in payload so far. So we have (PACKET_MAX_PAYLOAD_SIZE - 11) bytes left to store things
+			}
+			memcpy ((uint8_t *)(ptr + 2), TCPData, dataLength);
+		}
+		
+		
+		
 
 		makePack (&sendPackage, TOS_NODE_ID, destination, 21, PROTOCOL_TCP, mySeqNum, data, PACKET_MAX_PAYLOAD_SIZE);
 		dbg(COMMAND_CHANNEL, "Src: %hhu Dest: %hhu Seq: %hhu TTL: %hhu Protocol: %hhu	Payload:(flag: %x, srcPort: %hhu, destPort: %hhu, TCPSeqNum:  %u, TCPAckNum:  %u)\n", sendPackage.payload[0], sendPackage.src, sendPackage.dest, sendPackage.seq, sendPackage.TTL, sendPackage.protocol, sendPackage.payload[1], sendPackage.payload[2], *((uint32_t *)(&(sendPackage.payload[3]))), *((uint32_t *)(&(sendPackage.payload[3])) + 1));
@@ -772,7 +784,7 @@ void printSockets(){
 
 					// check the payload flags to see if it's an SYN, SYN-ACK, ACK, FIN
 					switch (myMsg->payload[0]) {
-						//sendTCP (uint8_t flags, uint16_t destination, uint8_t srcPort, uint8_t destPort, uint32_t seq, uint32_t ack)
+						//sendTCP (uint8_t flags, uint16_t destination, uint8_t srcPort, uint8_t destPort, uint32_t seq, uint32_t ack, NULL, 0)
 						bool portInitialized = FALSE;
 						socket_store_t socketTuple;
 						socket_t fd;
@@ -843,7 +855,7 @@ void printSockets(){
 
 								}
 
-								sendTCP (0b11000000, myMsg->src, myMsg->payload[2], myMsg->payload[1], 0, myMsg->seq + 1);
+								sendTCP (0b11000000, myMsg->src, myMsg->payload[2], myMsg->payload[1], 0, myMsg->seq + 1, NULL, 0);
 							}
 
 							//port = destPort, if destPort is open. Otherwise any other open port
@@ -900,7 +912,7 @@ void printSockets(){
 							dbg (COMMAND_CHANNEL, "HANDSHAKE (3/3)\n");
 							dbg (COMMAND_CHANNEL, "Received a SYN-ACK packet\n");
 							dbg (COMMAND_CHANNEL, "Sending ACK packet from |Node: %hhu port %hhu| ---> |Node: %hhu port %hhu| \n", TOS_NODE_ID, myMsg->payload[2], myMsg->src, myMsg->payload[1]);
-							sendTCP (0b01000000, myMsg->src, myMsg->payload[2], myMsg->payload[1], call Random.rand32(), myMsg->seq + 1);
+							sendTCP (0b01000000, myMsg->src, myMsg->payload[2], myMsg->payload[1], call Random.rand32(), myMsg->seq + 1, NULL, 0);
 
 
 
@@ -1176,7 +1188,7 @@ void printSockets(){
 		// call Transport.connect(fd, addr);
 
 		// send syn packet to node
-		//sendTCP (uint8_t flags, uint16_t destination, uint8_t srcPort, uint8_t destPort, uint32_t seq, uint32_t ack)
+		//sendTCP (uint8_t flags, uint16_t destination, uint8_t srcPort, uint8_t destPort, uint32_t seq, uint32_t ack, NULL, 0);
 
 		// add port to initialized ports array
 		initializedPorts[topPort] = srcPort;
@@ -1195,14 +1207,14 @@ void printSockets(){
 		dbg (COMMAND_CHANNEL, "HANDSHAKE (1/3)\n");
 		dbg (COMMAND_CHANNEL, "Sending SYN packet from |Node: %hhu port %hhu| ---> |Node: %hhu port %hhu| \n", TOS_NODE_ID, srcPort, destination, destPort);
 		printSockets();
-		sendTCP (0b10000000, destination, srcPort, destPort, seq, 0);	// SYN
+		sendTCP (0b10000000, destination, srcPort, destPort, seq, 0, NULL, 0);	// SYN
 
 
 		/*dbg (COMMAND_CHANNEL, "Sending Syn-Ack packet from port %hhu to node %hhu at port %hhu \n", srcPort, destination, destPort);
-		sendTCP (0b01000000, destination, srcPort, destPort, seq, seq + 1);	// SYNACK
+		sendTCP (0b01000000, destination, srcPort, destPort, seq, seq + 1, NULL, 0);	// SYNACK
 
 		dbg (COMMAND_CHANNEL, "Sending Ack packet from port %hhu to node %hhu at port %hhu \n", srcPort, destination, destPort);
-		sendTCP (0b11000000, destination, srcPort, destPort, seq, seq + 1);	// ACK*/
+		sendTCP (0b11000000, destination, srcPort, destPort, seq, seq + 1, NULL, 0);	// ACK*/
 
 		//sendSYN (destination, srcPort, destPort, seq);
 		//sendSynAck (destination, srcPort, destPort, seq, seq + 1);
@@ -1224,7 +1236,7 @@ void printSockets(){
 
 	}
 	
-	//void sendTCP (uint8_t flags, uint16_t destination, uint8_t srcPort, uint8_t destPort, uint32_t seq, uint32_t ack)
+	//void sendTCP (uint8_t flags, uint16_t destination, uint8_t srcPort, uint8_t destPort, uint32_t seq, uint32_t ack, NULL, 0)
 	
 	event void CommandHandler.setClientClose(uint16_t destination, uint8_t srcPort, uint8_t destPort){
 		
@@ -1242,7 +1254,7 @@ void printSockets(){
 				
 				// Do everything neccesary to close this socket (so it could be used later)
 				toClose.fd = 255;
-				
+				call Transport.updateSocketArray(i, &toClose);
 				// set seq and ack number (to send the FIN packet)
 				//seqNum = toClose.seq;
 				//ackNum = toClose.ack;
@@ -1261,7 +1273,7 @@ void printSockets(){
 		// look up seq and ack number
 		dbg (COMMAND_CHANNEL, "Sending FIN pack to node %hu (port %hhu)\n", destination, destPort);
 		// send FIN packet to server (sort of a promise not to send any more data to server, but can still send ACKS and FIN's to server. But still mest be prepared to recieve data)
-		sendTCP (0b00100000, destination, srcPort, destPort, toClose.seq, toClose.ack);
+		sendTCP (0b00100000, destination, srcPort, destPort, toClose.seq, toClose.ack, NULL, 0);
 		
 		
 		// Wait to get ACK from server of this FIN

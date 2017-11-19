@@ -48,7 +48,7 @@ implementation{
     int i;
     int j;
     int availableSize;
-    bool unused;
+    //bool unused;
     int availableSockets[100];
     int foundSocket;
 
