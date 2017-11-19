@@ -593,7 +593,7 @@ void printSockets(){
 	for(i = 0; i < 100; i++)
 	{
 		socketTuple = call Transport.getSocketArray(i);
-		if(socketTuple.fd != NULL)
+		if(socketTuple.fd != 255)
 		{
 			areSockets = TRUE;
 			line();
@@ -614,16 +614,25 @@ void printSockets(){
 
 	event void Boot.booted(){
 		int i;
+		socket_store_t socketTuple;
 		int j;
 		uint16_t z;
 
 		uint16_t * array;
 
 		z = 65;
+		//socket_store_t socketTuple;
+
 
 		totalNumNodes++;
 		dbg(GENERAL_CHANNEL, "NUM NODES: %d\n", totalNumNodes);
 
+		for(i = 0; i < 100; i++)
+		{
+			socketTuple = call Transport.getSocketArray(i);
+			socketTuple.fd = 255;
+			call Transport.updateSocketArray(i,&socketTuple);
+		}
 
 
 
@@ -811,38 +820,26 @@ void printSockets(){
 									dbg(COMMAND_CHANNEL, "\n");
 
 									// find empty socket and fill in with right values for new connection
-
 									for(i = 0; i < 100; i++)
 									{
 										socketTuple = call Transport.getSocketArray(i);
-										socketTuple.srcAddr = 500;
-										socketTuple.dest.port = 255;
-										call Transport.updateSocketArray(i,&socketTuple);
-									}
-
-									for(i = 0; i < 100; i++)
-									{
-										socketTuple = call Transport.getSocketArray(i);
-										if(socketTuple.fd == NULL){
+										if(socketTuple.fd == 255){
 											socketTuple.fd = i;
+
+											socketTuple.srcAddr = TOS_NODE_ID;
+											socketTuple.src = myMsg->payload[2];
 
 											socketTuple.dest.addr = myMsg->src;
 											socketTuple.dest.port = myMsg->payload[1];
 
-
-
-
-
 											dbg(COMMAND_CHANNEL, "Found empty socket! Socket #: %hhu\n", socketTuple.fd);
+											call Transport.updateSocketArray(i,&socketTuple);
 
 											printSockets();
 											break;
 										}
 
-
 									}
-
-
 
 								}
 
@@ -861,6 +858,45 @@ void printSockets(){
 
 						case 0b11000000:	// SYN-ACK Packet
 							line();
+							// setup socket in socketArray
+							fd = 0;
+							address.port = myMsg->payload[2];
+							address.addr = myMsg->src;
+							addr = & address;
+
+
+							if(call Transport.connect(fd,  addr) == SUCCESS)
+							{
+								dbg(COMMAND_CHANNEL, "\n");
+								line();
+								dbg(COMMAND_CHANNEL, "Made a connection on the server side socket\n");
+								line();
+								dbg(COMMAND_CHANNEL, "\n");
+
+								// find empty socket and fill in with right values for new connection
+								for(i = 0; i < 100; i++)
+								{
+									socketTuple = call Transport.getSocketArray(i);
+									if(socketTuple.fd == 255){
+										socketTuple.fd = i;
+
+										socketTuple.srcAddr = TOS_NODE_ID;
+										socketTuple.src = myMsg->payload[2];
+
+										socketTuple.dest.addr = myMsg->src;
+										socketTuple.dest.port = myMsg->payload[1];
+
+										dbg(COMMAND_CHANNEL, "Found empty socket! Socket #: %hhu\n", socketTuple.fd);
+										call Transport.updateSocketArray(i,&socketTuple);
+
+										printSockets();
+										break;
+									}
+
+								}
+
+							}
+
 							dbg (COMMAND_CHANNEL, "HANDSHAKE (3/3)\n");
 							dbg (COMMAND_CHANNEL, "Received a SYN-ACK packet\n");
 							dbg (COMMAND_CHANNEL, "Sending ACK packet from |Node: %hhu port %hhu| ---> |Node: %hhu port %hhu| \n", TOS_NODE_ID, myMsg->payload[2], myMsg->src, myMsg->payload[1]);
@@ -1050,7 +1086,7 @@ void printSockets(){
 	/*event void CommandHandler.setTestServer(uint16_t address, uint8_t port){*/
 	event void CommandHandler.setTestServer(uint8_t port){
 
-		//int i;
+		int i;
 		socket_addr_t ad;
 		socket_addr_t * addr;
 		socket_t fd;
@@ -1198,7 +1234,7 @@ void printSockets(){
 		socket_store_t toClose;
 		
 		dbg (COMMAND_CHANNEL, "Destination: %hhu, srcPort: %hhu, destPort: %hhu\n", destination, srcPort, destPort);
-		/*
+		
 		for (i = 0; i < 100; i++) {
 			toClose = call Transport.getSocketArray(i);
 			if ((toClose.fd != 0) && (toClose.dest.addr == destination) && (toClose.dest.port == destPort) && (toClose.src == srcPort)) {
@@ -1219,7 +1255,7 @@ void printSockets(){
 			return;
 		}
 		
-		*/
+		
 		
 		
 		// look up seq and ack number
