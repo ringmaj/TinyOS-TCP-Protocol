@@ -285,8 +285,8 @@ implementation{ // each node's private variables must be declared here, (or it w
 		
 		
 
-		makePack (&sendPackage, TOS_NODE_ID, destination, 21, PROTOCOL_TCP, mySeqNum, data, PACKET_MAX_PAYLOAD_SIZE);
-		dbg(COMMAND_CHANNEL, "Src: %hhu Dest: %hhu Seq: %hhu TTL: %hhu Protocol: %hhu	Payload:(flag: %x, srcPort: %hhu, destPort: %hhu, TCPSeqNum:  %u, TCPAckNum:  %u)\n", sendPackage.payload[0], sendPackage.src, sendPackage.dest, sendPackage.seq, sendPackage.TTL, sendPackage.protocol, sendPackage.payload[1], sendPackage.payload[2], *((uint32_t *)(&(sendPackage.payload[3]))), *((uint32_t *)(&(sendPackage.payload[3])) + 1));
+		makePack (&sendPackage, TOS_NODE_ID, destination, 21, PROTOCOL_TCP, mySeqNum, (uint8_t *)payloadArr, PACKET_MAX_PAYLOAD_SIZE);
+		dbg(COMMAND_CHANNEL, "Sending a package - Src: %hu Dest: %hu Seq: %hhu TTL: %hhu Protocol: %hhu	Payload:(flag: 0x%.2x, srcPort: %hhu, destPort: %hhu, TCPSeqNum:  %u, TCPAckNum:  %u)\n", sendPackage.src, sendPackage.dest, sendPackage.seq, sendPackage.TTL, sendPackage.protocol, sendPackage.payload[0], sendPackage.payload[1], sendPackage.payload[2], *((uint32_t *)(&(sendPackage.payload[3]))), *((uint32_t *)(&(sendPackage.payload[3])) + 1));
 		call Sender.send (sendPackage, forwardingTableNext[destination]);
 		sentPacks[packsSent%50] = (((sendPackage.seq) << 16) | sendPackage.src);	// keep track of all packs send so as not to send them twice
 		packsSent++;
@@ -793,7 +793,12 @@ void printSockets(){
 						
 						
 						case 0b10000000:	// SYN Packet
-							dbg (COMMAND_CHANNEL, "Received a SYN Packet\n");
+							dbg (COMMAND_CHANNEL, "Printing Payload in hex: 0x");
+							for (i = 0; i < PACKET_MAX_PAYLOAD_SIZE; i++) {
+								printf ("%.2x", myMsg->payload[i]);
+							}
+							printf ("\n");
+							dbg (COMMAND_CHANNEL, "Received a SYN Packet - flags: 0x%.2x, srcPort: %hhu, destPort: %hhu, TCPSeqNum: %u, ackNum: %u, transferSize: %hu\n", myMsg->payload[0], myMsg->payload[1], myMsg->payload[2], (uint32_t *)(&(myMsg->payload[3])), ((uint32_t *)(&(myMsg->payload[3]))) + 1, ((uint32_t *)(&(myMsg->payload[3]))) + 2);
 							//data[1] == srcPort;
 							//data[2] == destPort;
 
@@ -1207,7 +1212,7 @@ void printSockets(){
 		dbg (COMMAND_CHANNEL, "HANDSHAKE (1/3)\n");
 		dbg (COMMAND_CHANNEL, "Sending SYN packet from |Node: %hhu port %hhu| ---> |Node: %hhu port %hhu| \n", TOS_NODE_ID, srcPort, destination, destPort);
 		printSockets();
-		sendTCP (0b10000000, destination, srcPort, destPort, seq, 0, NULL, 0);	// SYN
+		sendTCP (0b10000000, destination, srcPort, destPort, seq, 0, (uint8_t *)(&transfer), sizeof (transfer));	// SYN
 
 
 		/*dbg (COMMAND_CHANNEL, "Sending Syn-Ack packet from port %hhu to node %hhu at port %hhu \n", srcPort, destination, destPort);
