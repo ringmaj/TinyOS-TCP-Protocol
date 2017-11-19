@@ -793,12 +793,12 @@ void printSockets(){
 						
 						
 						case 0b10000000:	// SYN Packet
-							dbg (COMMAND_CHANNEL, "Printing Payload in hex: 0x");
-							for (i = 0; i < PACKET_MAX_PAYLOAD_SIZE; i++) {
-								printf ("%.2x", myMsg->payload[i]);
-							}
-							printf ("\n");
-							dbg (COMMAND_CHANNEL, "Received a SYN Packet - flags: 0x%.2x, srcPort: %hhu, destPort: %hhu, TCPSeqNum: %u, ackNum: %u, transferSize: %hu\n", myMsg->payload[0], myMsg->payload[1], myMsg->payload[2], (uint32_t *)(&(myMsg->payload[3])), ((uint32_t *)(&(myMsg->payload[3]))) + 1, ((uint32_t *)(&(myMsg->payload[3]))) + 2);
+							//dbg (COMMAND_CHANNEL, "Printing Payload in hex: 0x");
+							//for (i = 0; i < PACKET_MAX_PAYLOAD_SIZE; i++) {
+							//	printf ("%.2x", myMsg->payload[i]);
+							//}
+							//printf ("\n");
+							dbg (COMMAND_CHANNEL, "Received a SYN Packet - flags: 0x%.2x, srcPort: %hhu, destPort: %hhu, TCPSeqNum: %u, ackNum: %u, transferSize: %hu\n", myMsg->payload[0], myMsg->payload[1], myMsg->payload[2], *((uint32_t *)(myMsg->payload + 3)), *((uint32_t *)(myMsg->payload + 7)), *((uint16_t *)(myMsg->payload + 11)));
 							//data[1] == srcPort;
 							//data[2] == destPort;
 
