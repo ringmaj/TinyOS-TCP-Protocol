@@ -58,7 +58,7 @@ implementation{
 
     for(i = 0; i < 100; i++)
     {
-      if(socketArray[i].fd == NULL)
+      if(socketArray[i].fd == 255)
       {
         availableSockets[j] = i;
         j++;
@@ -96,7 +96,7 @@ implementation{
     socketArray[fd].state = LISTEN;
     serverIndex = fd;
 
-    if(fd != NULL)
+    if(fd != 255)
       return SUCCESS;
     else
       return FALSE;
@@ -109,7 +109,7 @@ implementation{
 
     acceptedSocket = call Transport.socket();
     // if there are no sockets available, return null
-    if(acceptedSocket == NULL)
+    if(acceptedSocket == 255)
       return NULL;
 
     // found a socket, now copy the server socket and update destination and port to
@@ -149,7 +149,7 @@ implementation{
 
     for(i = 0; i < 100; i++)
     {
-      if(socketArray[i].fd == NULL)
+      if(socketArray[i].fd == 255)
       {
         availableSocket = TRUE;
       }
