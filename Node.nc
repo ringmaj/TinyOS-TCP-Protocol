@@ -623,6 +623,9 @@ void printSockets(){
 	dbg (COMMAND_CHANNEL, "\n");
 }
 
+	void continueTCPStream (socket_store_t socketTuple) {	// client/sender
+		
+	}
 
 	event void Boot.booted(){
 		int i;
@@ -919,7 +922,8 @@ void printSockets(){
 							dbg (COMMAND_CHANNEL, "Sending ACK packet from |Node: %hhu port %hhu| ---> |Node: %hhu port %hhu| \n", TOS_NODE_ID, myMsg->payload[2], myMsg->src, myMsg->payload[1]);
 							sendTCP (0b01000000, myMsg->src, myMsg->payload[2], myMsg->payload[1], call Random.rand32(), myMsg->seq + 1, NULL, 0);
 
-
+							// Begin sending data
+							continueTCPStream (socketTuple);
 
 							break;
 
