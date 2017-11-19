@@ -54,7 +54,7 @@ module Node{
 	uses interface Queue<uint16_t> as q;
 	uses interface Pool<uint16_t> as p;
 
-	uses interface Hashmap<uint16_t> as h;
+	uses interface Hashmap<uint32_t> as socketHashMap;	// Used to look up "fd" (index of socket in socketArray, to get the socket). Keys are: ((srcPort << 24)|(destPort << 16)|(destAddress)), which is of type uint32_t. Values looked up are "fd" file descriptor, which is of type uint8_t socket_port_t;
 
 	uses interface Transport;
 
@@ -624,6 +624,24 @@ void printSockets(){
 }
 
 	void continueTCPStream (socket_store_t socketTuple) {	// client/sender
+		//socket_store_t sock;
+		dbg (COMMAND_CHANNEL, "this function (continueTCPStream) should check if there is enough window size, and send if so. Or else do nothing\n");
+		
+		if (socketTuple.fd == 255) {
+			dbg (COMMAND_CHANNEL, "Error: continueTCPStream called with an uninitialized socket\n");
+			return;
+		}
+		
+		//sock = Transport.getSocketArray(fd)
+		if (socketTuple.lastAck > socketTuple.lastSent) {
+			// send another packet
+			//sendTCP (0b00010000, socketTuple.dest.addr, socketTuple.src, socketTuple.dest.port, socketTuple.seq, socketTuple.ack, pointerToSendBufferDataToSend, min(windowSize, dataAvailable)%9);
+			socketTuple.seq++;
+			//socketTuple.lastSent += min(windowSize, dataAvailable)%9;
+		}
+		
+		
+		call Transport.updateSocketArray (socketTuple.fd, &socketTuple);
 		
 	}
 
@@ -787,7 +805,6 @@ void printSockets(){
 
 					// check the payload flags to see if it's an SYN, SYN-ACK, ACK, FIN
 					switch (myMsg->payload[0]) {
-						//sendTCP (uint8_t flags, uint16_t destination, uint8_t srcPort, uint8_t destPort, uint32_t seq, uint32_t ack, NULL, 0)
 						bool portInitialized = FALSE;
 						socket_store_t socketTuple;
 						socket_t fd;
@@ -854,8 +871,14 @@ void printSockets(){
 
 											dbg(COMMAND_CHANNEL, "Found empty socket! Socket #: %hhu\n", socketTuple.fd);
 											call Transport.updateSocketArray(i,&socketTuple);
+											
+											// Store the fd in a hashmap so it can be easily accessed later
+											dbg (COMMAND_CHANNEL, "Storing file descriptor %hhu in hashmap by srcPort %hhu, destPort%hhu, and destAddress %hhu\n", socketTuple.fd, myMsg->payload[1], myMsg->payload[2], myMsg->src);
+											call socketHashMap.insert ((myMsg->payload[1] << 24)|(myMsg->payload[2] << 16)|(myMsg->src), socketTuple.fd);
 
 											printSockets();
+											
+											
 											break;
 										}
 
@@ -924,11 +947,23 @@ void printSockets(){
 
 							// Begin sending data
 							continueTCPStream (socketTuple);
-
+							
+							
+							
+							// Experimental stuff here
+							//dbg (COMMAND_CHANNEL, "Storing destPort %hhu by destAddr %hu\n", socketTuple.dest.port, myMsg->src);
+							//call socketHashMap.insert(myMsg->src, socketTuple.dest.port);
+							//dbg (COMMAND_CHANNEL, "Looking up destPort by destAddr: %hhu\n", (uint8_t)(call socketHashMap.get(myMsg->src)));
+							
+							
 							break;
 
 						case 0b00100000:	// FIN Packet
 							dbg (COMMAND_CHANNEL, "Received a FIN packet\n");
+							
+							// Remove connection from client and server's hashTables, and socketArrays
+							
+							
 							break;
 
 						case 0b01010000:	// data (with ACK)
@@ -1218,6 +1253,9 @@ void printSockets(){
 		printSockets();
 		sendTCP (0b10000000, destination, srcPort, destPort, seq, 0, (uint8_t *)(&transfer), sizeof (transfer));	// SYN
 
+		// add ((srcPort << 24)|(destPort << 16)|(destAddress)) to hashtable to look up file descriptor "fd" faster next time. "fd" will be used to look up the port in socketArray 
+		call socketHashMap.insert ((srcPort << 24)|(destPort << 16)|(destination), fd);
+		// hashmap entry and socketArray entry will have to be removed when connection is closed, or if server doesn't respond
 
 		/*dbg (COMMAND_CHANNEL, "Sending Syn-Ack packet from port %hhu to node %hhu at port %hhu \n", srcPort, destination, destPort);
 		sendTCP (0b01000000, destination, srcPort, destPort, seq, seq + 1, NULL, 0);	// SYNACK

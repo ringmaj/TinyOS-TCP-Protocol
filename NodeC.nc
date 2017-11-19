@@ -55,8 +55,8 @@ implementation {
   	components new QueueC(uint16_t, 150);
   	Node.q -> QueueC;
 
-    components new HashmapC(uint16_t, 150);
-  	Node.h -> HashmapC;
+    components new HashmapC(uint32_t, 150);
+  	Node.socketHashMap -> HashmapC;
 
     components new PoolC(uint16_t, 150);
     Node.p -> PoolC;
