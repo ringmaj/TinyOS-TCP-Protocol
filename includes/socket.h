@@ -34,14 +34,15 @@ typedef uint8_t socket_t;
 typedef struct socket_store_t{
     uint8_t flag;
     enum socket_state state;
-
+	bool isSender;	// True if the node is the sender in this connection. False if the node is the receiver in this connection
     // stores the socket fd
     socket_t fd;
 
     nx_uint16_t srcAddr;
     socket_port_t src;
     socket_addr_t dest;
-
+	uint8_t transfer;	// how many bytes should be transferred in total
+	uint8_t currentlyBeingTransferred;	// how many bytes we have left to transfer
     uint32_t seq;
     uint32_t ack;
 

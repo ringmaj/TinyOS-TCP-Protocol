@@ -235,7 +235,25 @@ implementation{ // each node's private variables must be declared here, (or it w
 		dbg (channel, "0x%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X\n", data[0], data[1], data[2], data[3], data[4], data[5], data[6], data[7], data[8], data[9], data[10], data[11], data[12], data[13], data[14], data[15], data[16], data[17], data[18], data[19]);
 		//dbg (ROUTING_CHANNEL, "%d", getBit(data, 0));
 	}
-
+	
+	/*
+	void printTCP (pack printPack) {
+		dbg(COMMAND_CHANNEL, "Sending a package - Src: %hu Dest: %hu Seq: %hhu TTL: %hhu Protocol: %hhu	Payload:(flag: 0x%.2x, srcPort: %hhu, destPort: %hhu, TCPSeqNum:  %u, TCPAckNum:  %u)\n", printPack.src, printPack.dest, printPack.seq, printPack.TTL, printPack.protocol, printPack.payload[0], printPack.payload[1], printPack.payload[2], *((uint32_t *)(&(printPack.payload[3]))), *((uint32_t *)(&(printPack.payload[3])) + 1));
+		
+		dbg(COMMAND_CHANNEL, "Sending a package - Src: %hu Dest: %hu Seq: %hhu TTL: %hhu Protocol: %hhu	Payload:(flag: 0x%.2x, srcPort: %hhu, destPort: %hhu    \n",//, TCPSeqNum:  %u, TCPAckNum:  %u)\n", 
+		printPack->src, 
+		printPack->dest, 
+		printPack->seq, 
+		printPack->TTL, 
+		printPack->protocol, 
+		printPack->payload[0], 
+		printPack->payload[1], 
+		printPack->payload[2]);//, 
+		// *((uint32_t *)(&(printPack->payload[3]))), 
+		// *((uint32_t *)(&(printPack->payload[3])) + 1));
+	}
+	*/
+	
 	void sendLSP () {
 		uint8_t data [PACKET_MAX_PAYLOAD_SIZE];
 		writeLinkStatePack (data);	// Creates and formats the LSP, and stores it in array "data"
@@ -286,6 +304,7 @@ implementation{ // each node's private variables must be declared here, (or it w
 		
 
 		makePack (&sendPackage, TOS_NODE_ID, destination, 21, PROTOCOL_TCP, mySeqNum, (uint8_t *)payloadArr, PACKET_MAX_PAYLOAD_SIZE);
+		//printTCP(sendPackage);
 		dbg(COMMAND_CHANNEL, "Sending a package - Src: %hu Dest: %hu Seq: %hhu TTL: %hhu Protocol: %hhu	Payload:(flag: 0x%.2x, srcPort: %hhu, destPort: %hhu, TCPSeqNum:  %u, TCPAckNum:  %u)\n", sendPackage.src, sendPackage.dest, sendPackage.seq, sendPackage.TTL, sendPackage.protocol, sendPackage.payload[0], sendPackage.payload[1], sendPackage.payload[2], *((uint32_t *)(&(sendPackage.payload[3]))), *((uint32_t *)(&(sendPackage.payload[3])) + 1));
 		call Sender.send (sendPackage, forwardingTableNext[destination]);
 		sentPacks[packsSent%50] = (((sendPackage.seq) << 16) | sendPackage.src);	// keep track of all packs send so as not to send them twice
@@ -625,6 +644,7 @@ void printSockets(){
 
 	void continueTCPStream (socket_store_t socketTuple) {	// client/sender
 		//socket_store_t sock;
+		uint8_t bytesToSend = 9;
 		dbg (COMMAND_CHANNEL, "this function (continueTCPStream) should check if there is enough window size, and send if so. Or else do nothing\n");
 		
 		if (socketTuple.fd == 255) {
@@ -635,7 +655,17 @@ void printSockets(){
 		//sock = Transport.getSocketArray(fd)
 		if (socketTuple.lastAck > socketTuple.lastSent) {
 			// send another packet
-			//sendTCP (0b00010000, socketTuple.dest.addr, socketTuple.src, socketTuple.dest.port, socketTuple.seq, socketTuple.ack, pointerToSendBufferDataToSend, min(windowSize, dataAvailable)%9);
+			if (bytesToSend > socketTuple.effectiveWindow) { // bytesToSend = min(windowSize, transferLeft, 9)
+				bytesToSend = socketTuple.effectiveWindow;
+			}
+			if (bytesToSend > socketTuple.currentlyBeingTransferred) {
+				bytesToSend = socketTuple.currentlyBeingTransferred;
+			}
+			
+			
+			sendTCP (0b00010000, socketTuple.dest.addr, socketTuple.src, socketTuple.dest.port, socketTuple.seq, socketTuple.ack, (uint8_t*)(&(socketTuple.sendBuff)), bytesToSend);
+			socketTuple.currentlyBeingTransferred -= bytesToSend;
+			socketTuple.lastSent += bytesToSend;
 			socketTuple.seq++;
 			//socketTuple.lastSent += min(windowSize, dataAvailable)%9;
 		}
@@ -852,7 +882,7 @@ void printSockets(){
 								{
 									dbg(COMMAND_CHANNEL, "\n");
 									line();
-									dbg(COMMAND_CHANNEL, "Made a connection on the server side socket\n");
+									dbg(COMMAND_CHANNEL, "I, the server, got a connection from the client side socket\n");
 									line();
 									dbg(COMMAND_CHANNEL, "\n");
 
@@ -865,7 +895,7 @@ void printSockets(){
 
 											socketTuple.srcAddr = TOS_NODE_ID;
 											socketTuple.src = myMsg->payload[2];
-
+											socketTuple.isSender = FALSE;
 											socketTuple.dest.addr = myMsg->src;
 											socketTuple.dest.port = myMsg->payload[1];
 
@@ -895,8 +925,12 @@ void printSockets(){
 							break;
 
 						case 0b01000000:	// ACK Packet
-
-
+							socketTuple.lastAck = *((uint32_t *)(&(myMsg->payload[3])) + 1);
+							call Transport.updateSocketArray(socketTuple.fd, &socketTuple);
+							if (socketTuple.isSender){
+								dbg (COMMAND_CHANNEL, "I'm the sender. Continuing TCP stream:\n");
+								continueTCPStream(socketTuple);
+							}
 							break;
 
 						case 0b11000000:	// SYN-ACK Packet
@@ -905,18 +939,30 @@ void printSockets(){
 							fd = 0;
 							address.port = myMsg->payload[2];
 							address.addr = myMsg->src;
-							addr = & address;
+							addr = &address;
 
 
-							if(call Transport.connect(fd,  addr) == SUCCESS)
-							{
+							//if(call Transport.connect(fd,  addr) == SUCCESS)
+							//{
 								dbg(COMMAND_CHANNEL, "\n");
 								line();
-								dbg(COMMAND_CHANNEL, "Made a connection on the server side socket\n");
+								dbg(COMMAND_CHANNEL, "I, the client, made a connection on the server side socket\n");
 								line();
 								dbg(COMMAND_CHANNEL, "\n");
 
 								// find empty socket and fill in with right values for new connection
+								i = call socketHashMap.get(((myMsg->payload[2]) << 24)|((myMsg->payload[1]) << 16)| myMsg->src);
+								socketTuple = call Transport.getSocketArray(i);
+								//socketTuple = call Transport.getSocketArray(socketHashMap.get(((myMsg->payload[2]) << 24)|((myMsg->payload[1]) << 16)| myMsg->src);
+								//socketTuple.srcAddr = TOS_NODE_ID;
+								//socketTuple.src = myMsg->payload[2];
+
+								//socketTuple.dest.addr = myMsg->src;
+								//socketTuple.dest.port = myMsg->payload[1];
+								dbg(COMMAND_CHANNEL, "Found my connection's socket! Socket #: %hhu\n", socketTuple.fd);
+								call Transport.updateSocketArray(i,&socketTuple);
+								printSockets();
+								/*
 								for(i = 0; i < 100; i++)
 								{
 									socketTuple = call Transport.getSocketArray(i);
@@ -937,16 +983,20 @@ void printSockets(){
 									}
 
 								}
-
-							}
+								*/
+							//}
 
 							dbg (COMMAND_CHANNEL, "HANDSHAKE (3/3)\n");
 							dbg (COMMAND_CHANNEL, "Received a SYN-ACK packet\n");
-							dbg (COMMAND_CHANNEL, "Sending ACK packet from |Node: %hhu port %hhu| ---> |Node: %hhu port %hhu| \n", TOS_NODE_ID, myMsg->payload[2], myMsg->src, myMsg->payload[1]);
-							sendTCP (0b01000000, myMsg->src, myMsg->payload[2], myMsg->payload[1], call Random.rand32(), myMsg->seq + 1, NULL, 0);
+							//dbg (COMMAND_CHANNEL, "Sending ACK packet from |Node: %hhu port %hhu| ---> |Node: %hhu port %hhu| \n", TOS_NODE_ID, myMsg->payload[2], myMsg->src, myMsg->payload[1]);
+							//sendTCP (0b01000000, myMsg->src, myMsg->payload[2], myMsg->payload[1], call Random.rand32(), myMsg->seq + 1, NULL, 0);
 
 							// Begin sending data
-							continueTCPStream (socketTuple);
+							if (socketTuple.isSender){
+								dbg (COMMAND_CHANNEL, "I'm the sender. Continuing TCP stream:\n");
+								continueTCPStream(socketTuple);
+							}
+							
 							
 							
 							
@@ -970,7 +1020,7 @@ void printSockets(){
 							dbg (COMMAND_CHANNEL, "Received a Data packet with and ACK\n");
 							break;
 						default:		// data packet???
-
+							dbg (COMMAND_CHANNEL, "Received a TCP Packet with unknown flags\n");
 					}
 
 				}
@@ -1208,7 +1258,7 @@ void printSockets(){
 		socket_addr_t * addr;
 		socket_addr_t serverAddress;
 		socket_t fd;
-
+		socket_store_t socketTuple;
 		uint32_t seq;
 		uint32_t ack;
 
@@ -1227,7 +1277,17 @@ void printSockets(){
 		serverAddress.addr = destination;
 
 		addr = &serverAddress;
-
+		socketTuple = call Transport.getSocketArray(fd);
+		//socketTuple.fd = ;
+		socketTuple.srcAddr = TOS_NODE_ID;
+		socketTuple.src = srcPort;
+		socketTuple.dest.addr = destination;
+		socketTuple.dest.port = destPort;
+		socketTuple.isSender = TRUE;
+		socketTuple.transfer = 128;
+		socketTuple.currentlyBeingTransferred  = socketTuple.transfer;
+		socketTuple.lastSent = 0;	// 0 bytes have been sent so far
+		call Transport.updateSocketArray(fd, &socketTuple);
 		// try to make a connection with the server
 		// call Transport.connect(fd, addr);
 
