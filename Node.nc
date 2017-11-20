@@ -653,6 +653,7 @@ void printSockets(){
 		}
 		
 		//sock = Transport.getSocketArray(fd)
+		dbg (COMMAND_CHANNEL, "lastAck == %, lastSent == % \n", socketTuple.lastAck, socketTuple.lastSent);
 		if (socketTuple.lastAck > socketTuple.lastSent) {
 			// send another packet
 			if (bytesToSend > socketTuple.effectiveWindow) { // bytesToSend = min(windowSize, transferLeft, 9)
@@ -668,6 +669,8 @@ void printSockets(){
 			socketTuple.lastSent += bytesToSend;
 			socketTuple.seq++;
 			//socketTuple.lastSent += min(windowSize, dataAvailable)%9;
+		} else {
+			dbg (COMMAND_CHANNEL, "Can't send any more data. The effective window (%hhu) is full. Last sent byte was: %hhu\n", socketTuple.effectiveWindow, socketTuple.lastSent);
 		}
 		
 		
@@ -959,6 +962,13 @@ void printSockets(){
 
 								//socketTuple.dest.addr = myMsg->src;
 								//socketTuple.dest.port = myMsg->payload[1];
+								
+								// read the effective window from the SYN-ACK Packet, and store it in socketTuple:
+								socketTuple.effectiveWindow = 50;
+								//socketTuple.lastSent = 0;	// was already set to 0
+								
+								
+								
 								dbg(COMMAND_CHANNEL, "Found my connection's socket! Socket #: %hhu\n", socketTuple.fd);
 								call Transport.updateSocketArray(i,&socketTuple);
 								printSockets();
@@ -1018,6 +1028,13 @@ void printSockets(){
 
 						case 0b01010000:	// data (with ACK)
 							dbg (COMMAND_CHANNEL, "Received a Data packet with and ACK\n");
+							break;
+							
+						case 0b00010000:	// data
+							dbg (COMMAND_CHANNEL, "Received a data packet\n");
+							// send an ACK
+							
+							
 							break;
 						default:		// data packet???
 							dbg (COMMAND_CHANNEL, "Received a TCP Packet with unknown flags\n");
