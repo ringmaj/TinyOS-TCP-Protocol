@@ -665,6 +665,14 @@ void printSockets(){
 					dbg (COMMAND_CHANNEL, "socket: %hhu | Src address: %hhu  | Src port: %hhu  | Dest address: %hhu  | Dest port: %hhu  |  fd: %hhu  |  RTT: %hhu  |  State: %s\n", i, socketTuple.srcAddr,socketTuple.src,socketTuple.dest.addr, socketTuple.dest.port,socketTuple.fd, socketTuple.RTT, "SYN_RCVD");
 					break;
 
+				case 5:
+					dbg (COMMAND_CHANNEL, "socket: %hhu | Src address: %hhu  | Src port: %hhu  | Dest address: %hhu  | Dest port: %hhu  |  fd: %hhu  |  RTT: %hhu  |  State: %s\n", i, socketTuple.srcAddr,socketTuple.src,socketTuple.dest.addr, socketTuple.dest.port,socketTuple.fd, socketTuple.RTT, "FIN_SENT");
+					break;
+
+				case 6:
+					dbg (COMMAND_CHANNEL, "socket: %hhu | Src address: %hhu  | Src port: %hhu  | Dest address: %hhu  | Dest port: %hhu  |  fd: %hhu  |  RTT: %hhu  |  State: %s\n", i, socketTuple.srcAddr,socketTuple.src,socketTuple.dest.addr, socketTuple.dest.port,socketTuple.fd, socketTuple.RTT, "FIN_RCVD");
+					break;
+
 
 			}
 
@@ -1452,37 +1460,38 @@ void printSockets(){
 		int i;
 		//uint32_t seqNum;
 		//uint32_t ackNum;
-		socket_store_t toClose;
-
-		dbg (COMMAND_CHANNEL, "Destination: %hhu, srcPort: %hhu, destPort: %hhu\n", destination, srcPort, destPort);
-
-		for (i = 0; i < 100; i++) {
-			toClose = call Transport.getSocketArray(i);
-			if ((toClose.fd != 0) && (toClose.dest.addr == destination) && (toClose.dest.port == destPort) && (toClose.src == srcPort)) {
-				dbg (COMMAND_CHANNEL, "Found the socket to close. Closing it\n");
-
-				// Do everything neccesary to close this socket (so it could be used later)
-				toClose.fd = 255;
-				call Transport.updateSocketArray(i, &toClose);
-				// set seq and ack number (to send the FIN packet)
-				//seqNum = toClose.seq;
-				//ackNum = toClose.ack;
-				break;
-			}
-
-		}
-		if (i == 100) {	// could also do check if (toClose == NULL) ???? more readable????
-			dbg (COMMAND_CHANNEL, "Could not find socket with this destAddress, destPort, and srcPort\n");
-			return;
-		}
+		socket_store_t socketTuple;
 
 
+
+
+		i = call socketHashMap.get(((srcPort) << 24)|((destPort) << 16)| destination);
 
 
 		// look up seq and ack number
+		dbg(COMMAND_CHANNEL, "\n");
+		dbg(COMMAND_CHANNEL, "\n");
+		dbg(COMMAND_CHANNEL, "\n");
+		dbg(COMMAND_CHANNEL, "\n");
+		dbg(COMMAND_CHANNEL, "\n");
+
+		dbg(COMMAND_CHANNEL, "Closing connection at Socket # %hhu\n", i);
+		dbg (COMMAND_CHANNEL, "Closing connection from -> Destination: %hhu, srcPort: %hhu, destPort: %hhu\n", destination, srcPort, destPort);
 		dbg (COMMAND_CHANNEL, "Sending FIN pack to node %hu (port %hhu)\n", destination, destPort);
+
+		// update socket State
+
+		socketTuple = call Transport.getSocketArray(i);
+		socketTuple.state = FIN_SENT;
+		call Transport.updateSocketArray(i,&socketTuple);
+		printSockets();
+		line();
+
+
+
+
 		// send FIN packet to server (sort of a promise not to send any more data to server, but can still send ACKS and FIN's to server. But still mest be prepared to recieve data)
-		sendTCP (0b00100000, destination, srcPort, destPort, toClose.seq, toClose.ack, NULL, 0);
+		sendTCP (0b00100000, destination, srcPort, destPort, socketTuple.seq, socketTuple.ack, NULL, 0);
 
 
 		// Wait to get ACK from server of this FIN
