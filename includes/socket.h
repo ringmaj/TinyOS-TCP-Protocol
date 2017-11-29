@@ -14,6 +14,8 @@ enum socket_state{
     ESTABLISHED,
     SYN_SENT,
     SYN_RCVD,
+    FIN_SENT,
+    FIN_RCVD,
 };
 
 
