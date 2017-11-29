@@ -80,7 +80,7 @@ implementation{
 
             case CMD_KILL:
                 dbg(COMMAND_CHANNEL, "Command Type: Client Close Connection\n");
-                signal CommandHandler.setClientClose(buff[0], buff[1], buff[2]);
+                signal CommandHandler.setClientClose(buff[0], buff[2], buff[1]);
                 break;
 
             default:
