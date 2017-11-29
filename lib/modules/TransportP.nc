@@ -73,7 +73,9 @@ implementation{
     }
 
     // Get random socket fd from the available sockets
-    foundSocket = call Random.rand16() %availableSize;
+    foundSocket = call Random.rand32() % availableSize;
+
+    dbg(COMMAND_CHANNEL, "available size: %hhu\n", availableSize);
 
     fd = availableSockets[foundSocket];
 

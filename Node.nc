@@ -104,6 +104,10 @@ implementation{ // each node's private variables must be declared here, (or it w
 		socket_port_t initializedPorts[100];
 		// Holds the index for the last port in initializedPorts array
 		uint16_t topPort = 0;
+		uint16_t rtt_calc;
+		uint16_t startTime;
+		uint16_t endTime;
+
 
 	// Used in neighbor discovery
 	uint16_t neighbors [50];
@@ -235,25 +239,25 @@ implementation{ // each node's private variables must be declared here, (or it w
 		dbg (channel, "0x%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X\n", data[0], data[1], data[2], data[3], data[4], data[5], data[6], data[7], data[8], data[9], data[10], data[11], data[12], data[13], data[14], data[15], data[16], data[17], data[18], data[19]);
 		//dbg (ROUTING_CHANNEL, "%d", getBit(data, 0));
 	}
-	
+
 	/*
 	void printTCP (pack printPack) {
 		dbg(COMMAND_CHANNEL, "Sending a package - Src: %hu Dest: %hu Seq: %hhu TTL: %hhu Protocol: %hhu	Payload:(flag: 0x%.2x, srcPort: %hhu, destPort: %hhu, TCPSeqNum:  %u, TCPAckNum:  %u)\n", printPack.src, printPack.dest, printPack.seq, printPack.TTL, printPack.protocol, printPack.payload[0], printPack.payload[1], printPack.payload[2], *((uint32_t *)(&(printPack.payload[3]))), *((uint32_t *)(&(printPack.payload[3])) + 1));
-		
-		dbg(COMMAND_CHANNEL, "Sending a package - Src: %hu Dest: %hu Seq: %hhu TTL: %hhu Protocol: %hhu	Payload:(flag: 0x%.2x, srcPort: %hhu, destPort: %hhu    \n",//, TCPSeqNum:  %u, TCPAckNum:  %u)\n", 
-		printPack->src, 
-		printPack->dest, 
-		printPack->seq, 
-		printPack->TTL, 
-		printPack->protocol, 
-		printPack->payload[0], 
-		printPack->payload[1], 
-		printPack->payload[2]);//, 
-		// *((uint32_t *)(&(printPack->payload[3]))), 
+
+		dbg(COMMAND_CHANNEL, "Sending a package - Src: %hu Dest: %hu Seq: %hhu TTL: %hhu Protocol: %hhu	Payload:(flag: 0x%.2x, srcPort: %hhu, destPort: %hhu    \n",//, TCPSeqNum:  %u, TCPAckNum:  %u)\n",
+		printPack->src,
+		printPack->dest,
+		printPack->seq,
+		printPack->TTL,
+		printPack->protocol,
+		printPack->payload[0],
+		printPack->payload[1],
+		printPack->payload[2]);//,
+		// *((uint32_t *)(&(printPack->payload[3]))),
 		// *((uint32_t *)(&(printPack->payload[3])) + 1));
 	}
 	*/
-	
+
 	void sendLSP () {
 		uint8_t data [PACKET_MAX_PAYLOAD_SIZE];
 		writeLinkStatePack (data);	// Creates and formats the LSP, and stores it in array "data"
@@ -290,7 +294,7 @@ implementation{ // each node's private variables must be declared here, (or it w
 		//dbg (COMMAND_CHANNEL, "TCP seq written in payload is: %x\n", *ptr);
 
 		memcpy ((ptr + 1), &ack, sizeof(ack));	// (uses 4 bytes) copy the TCP ack # into the packet
-		
+
 		// Send additional data in this TCP pack
 		if (TCPData != NULL && dataLength != 0) {
 			// Payload size is only 20 bytes (PACKET_MAX_PAYLOAD_SIZE). We already used 1 bytes for flags, 1 for srcPort, 1 for destPort, 4 for seq, 4 for ack. So we used 11 bytes, and so we only have 20 - 11 = 9 bytes left
@@ -299,9 +303,9 @@ implementation{ // each node's private variables must be declared here, (or it w
 			}
 			memcpy ((uint8_t *)(ptr + 2), TCPData, dataLength);
 		}
-		
-		
-		
+
+
+
 
 		makePack (&sendPackage, TOS_NODE_ID, destination, 21, PROTOCOL_TCP, mySeqNum, (uint8_t *)payloadArr, PACKET_MAX_PAYLOAD_SIZE);
 		//printTCP(sendPackage);
@@ -615,9 +619,19 @@ void printSockets(){
 	socket_store_t socketTuple;
 	bool areSockets = FALSE;
 
+
+
+
+
 	dbg (COMMAND_CHANNEL, "\n");
 	dbg (COMMAND_CHANNEL, "\n");
 	dbg (COMMAND_CHANNEL, "Node %hhu's sockets: \n", TOS_NODE_ID);
+
+
+
+
+
+
 
 
 
@@ -628,7 +642,33 @@ void printSockets(){
 		{
 			areSockets = TRUE;
 			line();
-			dbg (COMMAND_CHANNEL, "socket: %hhu | Src address: %hhu  | Src port: %hhu  | Dest address: %hhu  | Dest port: %hhu\n", i, socketTuple.srcAddr,socketTuple.src,socketTuple.dest.addr, socketTuple.dest.port);
+
+			switch(socketTuple.state)
+			{
+				case 0:
+					dbg (COMMAND_CHANNEL, "socket: %hhu | Src address: %hhu  | Src port: %hhu  | Dest address: %hhu  | Dest port: %hhu  |  fd: %hhu  |  RTT: %hhu  |  State: %s\n", i, socketTuple.srcAddr,socketTuple.src,socketTuple.dest.addr, socketTuple.dest.port,socketTuple.fd, socketTuple.RTT, "CLOSED");
+					break;
+
+				case 1:
+					dbg (COMMAND_CHANNEL, "socket: %hhu | Src address: %hhu  | Src port: %hhu  | Dest address: %hhu  | Dest port: %hhu  |  fd: %hhu  |  RTT: %hhu  |  State: %s\n", i, socketTuple.srcAddr,socketTuple.src,socketTuple.dest.addr, socketTuple.dest.port,socketTuple.fd, socketTuple.RTT, "LISTEN");
+					break;
+
+				case 2:
+					dbg (COMMAND_CHANNEL, "socket: %hhu | Src address: %hhu  | Src port: %hhu  | Dest address: %hhu  | Dest port: %hhu  |  fd: %hhu  |  RTT: %hhu  |  State: %s\n", i, socketTuple.srcAddr,socketTuple.src,socketTuple.dest.addr, socketTuple.dest.port,socketTuple.fd, socketTuple.RTT, "ESTABLISHED");
+					break;
+
+				case 3:
+					dbg (COMMAND_CHANNEL, "socket: %hhu | Src address: %hhu  | Src port: %hhu  | Dest address: %hhu  | Dest port: %hhu  |  fd: %hhu  |  RTT: %hhu  |  State: %s\n", i, socketTuple.srcAddr,socketTuple.src,socketTuple.dest.addr, socketTuple.dest.port,socketTuple.fd, socketTuple.RTT, "SYN_SENT");
+					break;
+
+				case 4:
+					dbg (COMMAND_CHANNEL, "socket: %hhu | Src address: %hhu  | Src port: %hhu  | Dest address: %hhu  | Dest port: %hhu  |  fd: %hhu  |  RTT: %hhu  |  State: %s\n", i, socketTuple.srcAddr,socketTuple.src,socketTuple.dest.addr, socketTuple.dest.port,socketTuple.fd, socketTuple.RTT, "SYN_RCVD");
+					break;
+
+
+			}
+
+
 			//dbg (COMMAND_CHANNEL, "\n");
 			line();
 		}
@@ -643,15 +683,24 @@ void printSockets(){
 }
 
 	void continueTCPStream (socket_store_t socketTuple) {	// client/sender
-		//socket_store_t sock;
+
+
+		// stop and Wait
+
+
+
+
+
+
+		/*//socket_store_t sock;
 		uint8_t bytesToSend = 9;
 		dbg (COMMAND_CHANNEL, "this function (continueTCPStream) should check if there is enough window size, and send if so. Or else do nothing\n");
-		
+
 		if (socketTuple.fd == 255) {
 			dbg (COMMAND_CHANNEL, "Error: continueTCPStream called with an uninitialized socket\n");
 			return;
 		}
-		
+
 		//sock = Transport.getSocketArray(fd)
 		dbg (COMMAND_CHANNEL, "lastAck == %, lastSent == % \n", socketTuple.lastAck, socketTuple.lastSent);
 		if (socketTuple.lastAck > socketTuple.lastSent) {
@@ -662,8 +711,8 @@ void printSockets(){
 			if (bytesToSend > socketTuple.currentlyBeingTransferred) {
 				bytesToSend = socketTuple.currentlyBeingTransferred;
 			}
-			
-			
+
+
 			sendTCP (0b00010000, socketTuple.dest.addr, socketTuple.src, socketTuple.dest.port, socketTuple.seq, socketTuple.ack, (uint8_t*)(&(socketTuple.sendBuff)), bytesToSend);
 			socketTuple.currentlyBeingTransferred -= bytesToSend;
 			socketTuple.lastSent += bytesToSend;
@@ -672,10 +721,10 @@ void printSockets(){
 		} else {
 			dbg (COMMAND_CHANNEL, "Can't send any more data. The effective window (%hhu) is full. Last sent byte was: %hhu\n", socketTuple.effectiveWindow, socketTuple.lastSent);
 		}
-		
-		
-		call Transport.updateSocketArray (socketTuple.fd, &socketTuple);
-		
+
+
+		call Transport.updateSocketArray (socketTuple.fd, &socketTuple);*/
+
 	}
 
 	event void Boot.booted(){
@@ -760,7 +809,7 @@ void printSockets(){
 	}
 
 	event void serverTimer.fired () {
-		
+
 	}
 
 	event void clientTimer.fired () {
@@ -843,8 +892,8 @@ void printSockets(){
 						socket_t fd;
 						socket_addr_t address;
 						socket_addr_t * addr;
-						
-						
+
+
 						case 0b10000000:	// SYN Packet
 							//dbg (COMMAND_CHANNEL, "Printing Payload in hex: 0x");
 							//for (i = 0; i < PACKET_MAX_PAYLOAD_SIZE; i++) {
@@ -903,15 +952,16 @@ void printSockets(){
 											socketTuple.dest.port = myMsg->payload[1];
 
 											dbg(COMMAND_CHANNEL, "Found empty socket! Socket #: %hhu\n", socketTuple.fd);
+											socketTuple.state = SYN_RCVD;
 											call Transport.updateSocketArray(i,&socketTuple);
-											
+
 											// Store the fd in a hashmap so it can be easily accessed later
 											dbg (COMMAND_CHANNEL, "Storing file descriptor %hhu in hashmap by srcPort %hhu, destPort%hhu, and destAddress %hhu\n", socketTuple.fd, myMsg->payload[1], myMsg->payload[2], myMsg->src);
 											call socketHashMap.insert ((myMsg->payload[1] << 24)|(myMsg->payload[2] << 16)|(myMsg->src), socketTuple.fd);
 
 											printSockets();
-											
-											
+
+
 											break;
 										}
 
@@ -927,6 +977,19 @@ void printSockets(){
 							//sendTCP (0b11000000, myMsg->src, port, myMsg->payload[1], call Random.rand32(), myMsg->seq + 1)
 							break;
 
+
+							case 0b01000001:	// ACK Packet for three way handshake only
+							line();
+								dbg(COMMAND_CHANNEL, "recieved the final ack for the three way handshake\n");
+
+								i = call socketHashMap.get(((myMsg->payload[2]) << 24)|((myMsg->payload[1]) << 16)| myMsg->src);
+								socketTuple = call Transport.getSocketArray(i);
+								socketTuple.state = ESTABLISHED;
+								call Transport.updateSocketArray(i,&socketTuple);
+								printSockets();
+								line();
+								break;
+
 						case 0b01000000:	// ACK Packet
 							socketTuple.lastAck = *((uint32_t *)(&(myMsg->payload[3])) + 1);
 							call Transport.updateSocketArray(socketTuple.fd, &socketTuple);
@@ -937,6 +1000,12 @@ void printSockets(){
 							break;
 
 						case 0b11000000:	// SYN-ACK Packet
+
+						endTime = call clientTimer.getNow();
+						dbg (COMMAND_CHANNEL, "End time is: %hhu\n", endTime );
+						rtt_calc = startTime - endTime;
+						dbg (COMMAND_CHANNEL, "RTT is: %hhu\n", rtt_calc );
+
 							line();
 							// setup socket in socketArray
 							fd = 0;
@@ -962,16 +1031,19 @@ void printSockets(){
 
 								//socketTuple.dest.addr = myMsg->src;
 								//socketTuple.dest.port = myMsg->payload[1];
-								
+
 								// read the effective window from the SYN-ACK Packet, and store it in socketTuple:
 								socketTuple.effectiveWindow = 50;
 								//socketTuple.lastSent = 0;	// was already set to 0
-								
-								
-								
+
+
+								socketTuple.RTT = rtt_calc;
+								socketTuple.state = ESTABLISHED;
+
+
 								dbg(COMMAND_CHANNEL, "Found my connection's socket! Socket #: %hhu\n", socketTuple.fd);
 								call Transport.updateSocketArray(i,&socketTuple);
-								printSockets();
+
 								/*
 								for(i = 0; i < 100; i++)
 								{
@@ -998,43 +1070,44 @@ void printSockets(){
 
 							dbg (COMMAND_CHANNEL, "HANDSHAKE (3/3)\n");
 							dbg (COMMAND_CHANNEL, "Received a SYN-ACK packet\n");
-							//dbg (COMMAND_CHANNEL, "Sending ACK packet from |Node: %hhu port %hhu| ---> |Node: %hhu port %hhu| \n", TOS_NODE_ID, myMsg->payload[2], myMsg->src, myMsg->payload[1]);
-							//sendTCP (0b01000000, myMsg->src, myMsg->payload[2], myMsg->payload[1], call Random.rand32(), myMsg->seq + 1, NULL, 0);
+							printSockets();
+							dbg (COMMAND_CHANNEL, "Sending ACK packet from |Node: %hhu port %hhu| ---> |Node: %hhu port %hhu| \n", TOS_NODE_ID, myMsg->payload[2], myMsg->src, myMsg->payload[1]);
+							sendTCP (0b01000001, myMsg->src, myMsg->payload[2], myMsg->payload[1], call Random.rand32(), myMsg->seq + 1, NULL, 0);
 
 							// Begin sending data
 							if (socketTuple.isSender){
 								dbg (COMMAND_CHANNEL, "I'm the sender. Continuing TCP stream:\n");
 								continueTCPStream(socketTuple);
 							}
-							
-							
-							
-							
+
+
+
+
 							// Experimental stuff here
 							//dbg (COMMAND_CHANNEL, "Storing destPort %hhu by destAddr %hu\n", socketTuple.dest.port, myMsg->src);
 							//call socketHashMap.insert(myMsg->src, socketTuple.dest.port);
 							//dbg (COMMAND_CHANNEL, "Looking up destPort by destAddr: %hhu\n", (uint8_t)(call socketHashMap.get(myMsg->src)));
-							
-							
+
+
 							break;
 
 						case 0b00100000:	// FIN Packet
 							dbg (COMMAND_CHANNEL, "Received a FIN packet\n");
-							
+
 							// Remove connection from client and server's hashTables, and socketArrays
-							
-							
+
+
 							break;
 
 						case 0b01010000:	// data (with ACK)
 							dbg (COMMAND_CHANNEL, "Received a Data packet with and ACK\n");
 							break;
-							
+
 						case 0b00010000:	// data
 							dbg (COMMAND_CHANNEL, "Received a data packet\n");
 							// send an ACK
-							
-							
+
+
 							break;
 						default:		// data packet???
 							dbg (COMMAND_CHANNEL, "Received a TCP Packet with unknown flags\n");
@@ -1213,6 +1286,7 @@ void printSockets(){
 		socket_addr_t ad;
 		socket_addr_t * addr;
 		socket_t fd;
+		socket_store_t socketTuple;
 
 		// change port to one from cmd
 		ad.port = port;
@@ -1229,6 +1303,10 @@ void printSockets(){
 		// add port to initialized ports array
 		initializedPorts[topPort] = port;
 		topPort++;
+
+		socketTuple = call Transport.getSocketArray(fd);
+		socketTuple.state = LISTEN;
+		call Transport.updateSocketArray(fd, &socketTuple);
 
 
 		/*dbg(COMMAND_CHANNEL, "Port: %hhu\n", port);
@@ -1324,13 +1402,20 @@ void printSockets(){
 
 		//dbg(COMMAND_CHANNEL, "SEQ NUMBER: %hhu\n", seq);
 
+		startTime = call clientTimer.getNow();
+		dbg (COMMAND_CHANNEL, "Start time is: %hhu\n", startTime );
 		line();
 		dbg (COMMAND_CHANNEL, "HANDSHAKE (1/3)\n");
 		dbg (COMMAND_CHANNEL, "Sending SYN packet from |Node: %hhu port %hhu| ---> |Node: %hhu port %hhu| \n", TOS_NODE_ID, srcPort, destination, destPort);
+
+		// update socket State
+		socketTuple.state = SYN_SENT;
+		call Transport.updateSocketArray(fd, &socketTuple);
+
 		printSockets();
 		sendTCP (0b10000000, destination, srcPort, destPort, seq, 0, (uint8_t *)(&transfer), sizeof (transfer));	// SYN
 
-		// add ((srcPort << 24)|(destPort << 16)|(destAddress)) to hashtable to look up file descriptor "fd" faster next time. "fd" will be used to look up the port in socketArray 
+		// add ((srcPort << 24)|(destPort << 16)|(destAddress)) to hashtable to look up file descriptor "fd" faster next time. "fd" will be used to look up the port in socketArray
 		call socketHashMap.insert ((srcPort << 24)|(destPort << 16)|(destination), fd);
 		// hashmap entry and socketArray entry will have to be removed when connection is closed, or if server doesn't respond
 
@@ -1359,23 +1444,23 @@ void printSockets(){
 		//printSockets();
 
 	}
-	
+
 	//void sendTCP (uint8_t flags, uint16_t destination, uint8_t srcPort, uint8_t destPort, uint32_t seq, uint32_t ack, NULL, 0)
-	
+
 	event void CommandHandler.setClientClose(uint16_t destination, uint8_t srcPort, uint8_t destPort){
-		
+
 		int i;
 		//uint32_t seqNum;
 		//uint32_t ackNum;
 		socket_store_t toClose;
-		
+
 		dbg (COMMAND_CHANNEL, "Destination: %hhu, srcPort: %hhu, destPort: %hhu\n", destination, srcPort, destPort);
-		
+
 		for (i = 0; i < 100; i++) {
 			toClose = call Transport.getSocketArray(i);
 			if ((toClose.fd != 0) && (toClose.dest.addr == destination) && (toClose.dest.port == destPort) && (toClose.src == srcPort)) {
 				dbg (COMMAND_CHANNEL, "Found the socket to close. Closing it\n");
-				
+
 				// Do everything neccesary to close this socket (so it could be used later)
 				toClose.fd = 255;
 				call Transport.updateSocketArray(i, &toClose);
@@ -1384,27 +1469,27 @@ void printSockets(){
 				//ackNum = toClose.ack;
 				break;
 			}
-			
+
 		}
 		if (i == 100) {	// could also do check if (toClose == NULL) ???? more readable????
 			dbg (COMMAND_CHANNEL, "Could not find socket with this destAddress, destPort, and srcPort\n");
 			return;
 		}
-		
-		
-		
-		
+
+
+
+
 		// look up seq and ack number
 		dbg (COMMAND_CHANNEL, "Sending FIN pack to node %hu (port %hhu)\n", destination, destPort);
 		// send FIN packet to server (sort of a promise not to send any more data to server, but can still send ACKS and FIN's to server. But still mest be prepared to recieve data)
 		sendTCP (0b00100000, destination, srcPort, destPort, toClose.seq, toClose.ack, NULL, 0);
-		
-		
+
+
 		// Wait to get ACK from server of this FIN
-		
-		
+
+
 		// Wait for server to send it's last FIN (to know that the server is not sending more data)
-		
+
 	}
 
 
