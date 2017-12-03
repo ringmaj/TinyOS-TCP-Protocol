@@ -16,6 +16,11 @@ enum socket_state{
     SYN_RCVD,
     FIN_SENT,
     FIN_RCVD,
+    FIN_WAIT_1,
+    FIN_WAIT_2,
+    CLOSE_WAIT,
+    LAST_ACK,
+    TIME_WAIT,
 };
 
 
@@ -61,6 +66,7 @@ typedef struct socket_store_t{
     uint8_t nextExpected;
 
     uint16_t RTT;
+    uint16_t lastSentTime;
     uint8_t effectiveWindow;
 }socket_store_t;
 
