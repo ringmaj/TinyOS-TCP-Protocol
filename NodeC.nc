@@ -32,6 +32,7 @@ implementation {
 	components new TimerMilliC() as myLSPTimerC;
   components new TimerMilliC() as myServerTimerC;
   components new TimerMilliC() as myClientTimerC;
+  components new TimerMilliC() as myLastFinTimerC;
 
 
 	Node.periodicTimer->myTimerC;	// Wire interfact to component
@@ -40,6 +41,7 @@ implementation {
 	Node.LSPTimer->myLSPTimerC;
   Node.serverTimer -> myServerTimerC;
   Node.clientTimer -> myClientTimerC;
+    Node.lastFinTimer -> myLastFinTimerC;
 
     Node.Receive -> GeneralReceive;
 
