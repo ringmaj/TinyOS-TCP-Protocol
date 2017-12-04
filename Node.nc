@@ -1231,10 +1231,12 @@ void printSockets(){
 								else // resend the packet, from sendBuff[0]
 								{
 									// update timeout
+									dbg(TRANSPORT_CHANNEL, "---------------------------------------------------------------------\n");
 									dbg(TRANSPORT_CHANNEL, "LATE PACKET! RESENDING\n");
+									dbg(TRANSPORT_CHANNEL, "---------------------------------------------------------------------\n");
 									rcvd_ack_time = call clientTimer.getNow() + socketTuple.RTT;
 									buffPtr = &socketTuple.sendBuff[0];
-									dbg (TRANSPORT_CHANNEL, "Node %hu sends | (Data: %hhu, seq=%u, ack=%u)\n", TOS_NODE_ID, *buffPtr, socketTuple.seq, socketTuple.ack);
+									dbg (TRANSPORT_CHANNEL, "Node %hu resends | (Data: %hhu, seq=%u, ack=%u)\n", TOS_NODE_ID, *buffPtr, socketTuple.seq, socketTuple.ack);
 									sendTCP (0b00010000, socketTuple.dest.addr, socketTuple.src, socketTuple.dest.port, socketTuple.seq, socketTuple.ack, buffPtr, 1);
 
 								}
