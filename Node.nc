@@ -105,9 +105,9 @@ implementation{ // each node's private variables must be declared here, (or it w
 		socket_port_t initializedPorts[100];
 		// Holds the index for the last port in initializedPorts array
 		uint16_t topPort = 0;
-		uint16_t rtt_calc;
-		uint16_t startTime;
-		uint16_t endTime;
+		//uint16_t rtt_calc;
+		//uint16_t startTime;
+		//uint16_t endTime;
 
 		uint16_t nodeDest;
 		uint8_t nodeSrcPort;
@@ -653,51 +653,51 @@ void printSockets(){
 			switch(socketTuple.state)
 			{
 				case 0:
-					dbg (COMMAND_CHANNEL, "socket: %hhu | Src address: %hhu  | Src port: %hhu  | Dest address: %hhu  | Dest port: %hhu  |  fd: %hhu  |  RTT: %hhu  |  State: %s\n", i, socketTuple.srcAddr,socketTuple.src,socketTuple.dest.addr, socketTuple.dest.port,socketTuple.fd, socketTuple.RTT, "CLOSED");
+					dbg (COMMAND_CHANNEL, "socket: %hhu | Src address: %hhu  | Src port: %hhu  | Dest address: %hhu  | Dest port: %hhu  |  fd: %hhu  |  RTT: %u  |  State: %s\n", i, socketTuple.srcAddr,socketTuple.src,socketTuple.dest.addr, socketTuple.dest.port,socketTuple.fd, socketTuple.RTT, "CLOSED");
 					break;
 
 				case 1:
-					dbg (COMMAND_CHANNEL, "socket: %hhu | Src address: %hhu  | Src port: %hhu  | Dest address: %hhu  | Dest port: %hhu  |  fd: %hhu  |  RTT: %hhu  |  State: %s\n", i, socketTuple.srcAddr,socketTuple.src,socketTuple.dest.addr, socketTuple.dest.port,socketTuple.fd, socketTuple.RTT, "LISTEN");
+					dbg (COMMAND_CHANNEL, "socket: %hhu | Src address: %hhu  | Src port: %hhu  | Dest address: %hhu  | Dest port: %hhu  |  fd: %hhu  |  RTT: %u  |  State: %s\n", i, socketTuple.srcAddr,socketTuple.src,socketTuple.dest.addr, socketTuple.dest.port,socketTuple.fd, socketTuple.RTT, "LISTEN");
 					break;
 
 				case 2:
-					dbg (COMMAND_CHANNEL, "socket: %hhu | Src address: %hhu  | Src port: %hhu  | Dest address: %hhu  | Dest port: %hhu  |  fd: %hhu  |  RTT: %hhu  |  State: %s\n", i, socketTuple.srcAddr,socketTuple.src,socketTuple.dest.addr, socketTuple.dest.port,socketTuple.fd, socketTuple.RTT, "ESTABLISHED");
+					dbg (COMMAND_CHANNEL, "socket: %hhu | Src address: %hhu  | Src port: %hhu  | Dest address: %hhu  | Dest port: %hhu  |  fd: %hhu  |  RTT: %u  |  State: %s\n", i, socketTuple.srcAddr,socketTuple.src,socketTuple.dest.addr, socketTuple.dest.port,socketTuple.fd, socketTuple.RTT, "ESTABLISHED");
 					break;
 
 				case 3:
-					dbg (COMMAND_CHANNEL, "socket: %hhu | Src address: %hhu  | Src port: %hhu  | Dest address: %hhu  | Dest port: %hhu  |  fd: %hhu  |  RTT: %hhu  |  State: %s\n", i, socketTuple.srcAddr,socketTuple.src,socketTuple.dest.addr, socketTuple.dest.port,socketTuple.fd, socketTuple.RTT, "SYN_SENT");
+					dbg (COMMAND_CHANNEL, "socket: %hhu | Src address: %hhu  | Src port: %hhu  | Dest address: %hhu  | Dest port: %hhu  |  fd: %hhu  |  RTT: %u  |  State: %s\n", i, socketTuple.srcAddr,socketTuple.src,socketTuple.dest.addr, socketTuple.dest.port,socketTuple.fd, socketTuple.RTT, "SYN_SENT");
 					break;
 
 				case 4:
-					dbg (COMMAND_CHANNEL, "socket: %hhu | Src address: %hhu  | Src port: %hhu  | Dest address: %hhu  | Dest port: %hhu  |  fd: %hhu  |  RTT: %hhu  |  State: %s\n", i, socketTuple.srcAddr,socketTuple.src,socketTuple.dest.addr, socketTuple.dest.port,socketTuple.fd, socketTuple.RTT, "SYN_RCVD");
+					dbg (COMMAND_CHANNEL, "socket: %hhu | Src address: %hhu  | Src port: %hhu  | Dest address: %hhu  | Dest port: %hhu  |  fd: %hhu  |  RTT: %u  |  State: %s\n", i, socketTuple.srcAddr,socketTuple.src,socketTuple.dest.addr, socketTuple.dest.port,socketTuple.fd, socketTuple.RTT, "SYN_RCVD");
 					break;
 
 				case 5:
-					dbg (COMMAND_CHANNEL, "socket: %hhu | Src address: %hhu  | Src port: %hhu  | Dest address: %hhu  | Dest port: %hhu  |  fd: %hhu  |  RTT: %hhu  |  State: %s\n", i, socketTuple.srcAddr,socketTuple.src,socketTuple.dest.addr, socketTuple.dest.port,socketTuple.fd, socketTuple.RTT, "FIN_SENT");
+					dbg (COMMAND_CHANNEL, "socket: %hhu | Src address: %hhu  | Src port: %hhu  | Dest address: %hhu  | Dest port: %hhu  |  fd: %hhu  |  RTT: %u  |  State: %s\n", i, socketTuple.srcAddr,socketTuple.src,socketTuple.dest.addr, socketTuple.dest.port,socketTuple.fd, socketTuple.RTT, "FIN_SENT");
 					break;
 
 				case 6:
-					dbg (COMMAND_CHANNEL, "socket: %hhu | Src address: %hhu  | Src port: %hhu  | Dest address: %hhu  | Dest port: %hhu  |  fd: %hhu  |  RTT: %hhu  |  State: %s\n", i, socketTuple.srcAddr,socketTuple.src,socketTuple.dest.addr, socketTuple.dest.port,socketTuple.fd, socketTuple.RTT, "FIN_RCVD");
+					dbg (COMMAND_CHANNEL, "socket: %hhu | Src address: %hhu  | Src port: %hhu  | Dest address: %hhu  | Dest port: %hhu  |  fd: %hhu  |  RTT: %u  |  State: %s\n", i, socketTuple.srcAddr,socketTuple.src,socketTuple.dest.addr, socketTuple.dest.port,socketTuple.fd, socketTuple.RTT, "FIN_RCVD");
 					break;
 
 				case 7:
-					dbg (COMMAND_CHANNEL, "socket: %hhu | Src address: %hhu  | Src port: %hhu  | Dest address: %hhu  | Dest port: %hhu  |  fd: %hhu  |  RTT: %hhu  |  State: %s\n", i, socketTuple.srcAddr,socketTuple.src,socketTuple.dest.addr, socketTuple.dest.port,socketTuple.fd, socketTuple.RTT, "FIN_WAIT_1");
+					dbg (COMMAND_CHANNEL, "socket: %hhu | Src address: %hhu  | Src port: %hhu  | Dest address: %hhu  | Dest port: %hhu  |  fd: %hhu  |  RTT: %u  |  State: %s\n", i, socketTuple.srcAddr,socketTuple.src,socketTuple.dest.addr, socketTuple.dest.port,socketTuple.fd, socketTuple.RTT, "FIN_WAIT_1");
 					break;
 
 				case 8:
-					dbg (COMMAND_CHANNEL, "socket: %hhu | Src address: %hhu  | Src port: %hhu  | Dest address: %hhu  | Dest port: %hhu  |  fd: %hhu  |  RTT: %hhu  |  State: %s\n", i, socketTuple.srcAddr,socketTuple.src,socketTuple.dest.addr, socketTuple.dest.port,socketTuple.fd, socketTuple.RTT, "FIN_WAIT_2");
+					dbg (COMMAND_CHANNEL, "socket: %hhu | Src address: %hhu  | Src port: %hhu  | Dest address: %hhu  | Dest port: %hhu  |  fd: %hhu  |  RTT: %u  |  State: %s\n", i, socketTuple.srcAddr,socketTuple.src,socketTuple.dest.addr, socketTuple.dest.port,socketTuple.fd, socketTuple.RTT, "FIN_WAIT_2");
 					break;
 
 				case 9:
-					dbg (COMMAND_CHANNEL, "socket: %hhu | Src address: %hhu  | Src port: %hhu  | Dest address: %hhu  | Dest port: %hhu  |  fd: %hhu  |  RTT: %hhu  |  State: %s\n", i, socketTuple.srcAddr,socketTuple.src,socketTuple.dest.addr, socketTuple.dest.port,socketTuple.fd, socketTuple.RTT, "CLOSE_WAIT");
+					dbg (COMMAND_CHANNEL, "socket: %hhu | Src address: %hhu  | Src port: %hhu  | Dest address: %hhu  | Dest port: %hhu  |  fd: %hhu  |  RTT: %u  |  State: %s\n", i, socketTuple.srcAddr,socketTuple.src,socketTuple.dest.addr, socketTuple.dest.port,socketTuple.fd, socketTuple.RTT, "CLOSE_WAIT");
 					break;
 
 				case 10:
-					dbg (COMMAND_CHANNEL, "socket: %hhu | Src address: %hhu  | Src port: %hhu  | Dest address: %hhu  | Dest port: %hhu  |  fd: %hhu  |  RTT: %hhu  |  State: %s\n", i, socketTuple.srcAddr,socketTuple.src,socketTuple.dest.addr, socketTuple.dest.port,socketTuple.fd, socketTuple.RTT, "LAST_ACK");
+					dbg (COMMAND_CHANNEL, "socket: %hhu | Src address: %hhu  | Src port: %hhu  | Dest address: %hhu  | Dest port: %hhu  |  fd: %hhu  |  RTT: %u  |  State: %s\n", i, socketTuple.srcAddr,socketTuple.src,socketTuple.dest.addr, socketTuple.dest.port,socketTuple.fd, socketTuple.RTT, "LAST_ACK");
 					break;
 
 				case 11:
-					dbg (COMMAND_CHANNEL, "socket: %hhu | Src address: %hhu  | Src port: %hhu  | Dest address: %hhu  | Dest port: %hhu  |  fd: %hhu  |  RTT: %hhu  |  State: %s\n", i, socketTuple.srcAddr,socketTuple.src,socketTuple.dest.addr, socketTuple.dest.port,socketTuple.fd, socketTuple.RTT, "TIME_WAIT");
+					dbg (COMMAND_CHANNEL, "socket: %hhu | Src address: %hhu  | Src port: %hhu  | Dest address: %hhu  | Dest port: %hhu  |  fd: %hhu  |  RTT: %u  |  State: %s\n", i, socketTuple.srcAddr,socketTuple.src,socketTuple.dest.addr, socketTuple.dest.port,socketTuple.fd, socketTuple.RTT, "TIME_WAIT");
 					break;
 
 
@@ -1166,23 +1166,23 @@ void printSockets(){
 								socketTuple = call Transport.getSocketArray(i);
 
 								// check if it's 3 way handshake ACK, or closing Ack
-								if(socketTuple.state == ESTABLISHED)
+								if(socketTuple.state == ESTABLISHED) {
 									socketTuple.state = CLOSE_WAIT;
 
-								else if(socketTuple.state == FIN_WAIT_1)
+								} else if(socketTuple.state == FIN_WAIT_1) {
 										socketTuple.state = FIN_WAIT_2;
 
-								else if(socketTuple.state == FIN_WAIT_2)
+								} else if(socketTuple.state == FIN_WAIT_2) {
 												socketTuple.state = TIME_WAIT;
 
-								else if(socketTuple.state == LAST_ACK)
+								} else if(socketTuple.state == LAST_ACK) {
 									socketTuple.state = CLOSED;
-								else
+								} else if(socketTuple.state == SYN_RCVD){
+									socketTuple.RTT = *((uint32_t *)(myMsg->payload + 11));
+								} else {
 									socketTuple.state = ESTABLISHED;
-
-								if(socketTuple.state == SYN_RCVD)
-									socketTuple.RTT = *((uint32_t *)(myMsg->payload + 3));
-
+								}
+								
 								call Transport.updateSocketArray(i,&socketTuple);
 
 								if(socketTuple.state == CLOSED)
@@ -1247,13 +1247,13 @@ void printSockets(){
 
 
 
-						case 0b01000011: // received RTT value,
+						//case 0b01000011: // received RTT value,
 
-						dbg(COMMAND_CHANNEL, "RECEIVED RTT FROM NODE: %hhu, RTT is : %hhu\n", myMsg->src,*((uint32_t *)(myMsg->payload + 3)));
-						i = call socketHashMap.get(((myMsg->payload[2]) << 24)|((myMsg->payload[1]) << 16)| myMsg->src);
-						socketTuple = call Transport.getSocketArray(i);
-						socketTuple.RTT = *((uint32_t *)(myMsg->payload + 3));
-						call Transport.updateSocketArray(i,&socketTuple);
+						//dbg(COMMAND_CHANNEL, "RECEIVED RTT FROM NODE: %hhu, RTT is : %hhu\n", myMsg->src,*((uint32_t *)(myMsg->payload + 3)));
+						//i = call socketHashMap.get(((myMsg->payload[2]) << 24)|((myMsg->payload[1]) << 16)| myMsg->src);
+						//socketTuple = call Transport.getSocketArray(i);
+						//socketTuple.RTT = *((uint32_t *)(myMsg->payload + 3));
+						//call Transport.updateSocketArray(i,&socketTuple);
 
 
 
@@ -1261,11 +1261,22 @@ void printSockets(){
 
 						case 0b11000000:	// SYN-ACK Packet
 
-						endTime = call clientTimer.getNow();
-						dbg (COMMAND_CHANNEL, "End time is: %hhu\n", endTime );
-						rtt_calc = endTime - startTime;
-						dbg (COMMAND_CHANNEL, "RTT is: %hhu\n", rtt_calc );
-
+							//endTime = call clientTimer.getNow();
+							//dbg (COMMAND_CHANNEL, "End time is: %hhu\n", endTime );
+							//rtt_calc = endTime - startTime;
+							//dbg (COMMAND_CHANNEL, "RTT is: %hhu\n", rtt_calc );
+							
+							key = call clientTimer.getNow();
+							dbg (COMMAND_CHANNEL, "End time is: %u\n", key );
+							
+							// find empty socket and fill in with right values for new connection
+							i = call socketHashMap.get(((myMsg->payload[2]) << 24)|((myMsg->payload[1]) << 16)| myMsg->src);
+							socketTuple = call Transport.getSocketArray(i);
+						
+							//rtt_calc = endTime - startTime;
+							socketTuple.RTT = key - socketTuple.RTT;
+							
+							dbg (COMMAND_CHANNEL, "RTT is: %u\n", socketTuple.RTT );
 							line();
 							// setup socket in socketArray
 							fd = 0;
@@ -1282,9 +1293,6 @@ void printSockets(){
 								line();
 								dbg(COMMAND_CHANNEL, "\n");
 
-								// find empty socket and fill in with right values for new connection
-								i = call socketHashMap.get(((myMsg->payload[2]) << 24)|((myMsg->payload[1]) << 16)| myMsg->src);
-								socketTuple = call Transport.getSocketArray(i);
 								//socketTuple = call Transport.getSocketArray(socketHashMap.get(((myMsg->payload[2]) << 24)|((myMsg->payload[1]) << 16)| myMsg->src);
 								//socketTuple.srcAddr = TOS_NODE_ID;
 								//socketTuple.src = myMsg->payload[2];
@@ -1297,18 +1305,18 @@ void printSockets(){
 								//socketTuple.lastSent = 0;	// was already set to 0
 
 
-								socketTuple.RTT = rtt_calc;
+								//socketTuple.RTT = rtt_calc;
 								socketTuple.state = ESTABLISHED;
 
 
 								dbg(COMMAND_CHANNEL, "Found my connection's socket! Socket #: %hhu\n", socketTuple.fd);
-								call Transport.updateSocketArray(i,&socketTuple);
+								//call Transport.updateSocketArray(i,&socketTuple);
 
 
 
 						// update seq and ack numbers in socket
-						i = call socketHashMap.get(((myMsg->payload[2]) << 24)|((myMsg->payload[1]) << 16)| myMsg->src);
-						socketTuple = call Transport.getSocketArray(i);
+						//i = call socketHashMap.get(((myMsg->payload[2]) << 24)|((myMsg->payload[1]) << 16)| myMsg->src);
+						//socketTuple = call Transport.getSocketArray(i);
 						// ack = seq + 1
 						socketTuple.ack = *((uint32_t *)(myMsg->payload + 3)) + 1;
 						socketTuple.seq += 1;
@@ -1331,11 +1339,11 @@ void printSockets(){
 							dbg (COMMAND_CHANNEL, "Received a SYN-ACK packet\n");
 							printSockets();
 
-							dbg (COMMAND_CHANNEL, "Sending RTT from |Node: %hhu port %hhu| ---> |Node: %hhu port %hhu| \n", TOS_NODE_ID, myMsg->payload[2], myMsg->src, myMsg->payload[1]);
-							sendTCP (0b01000011, myMsg->src, myMsg->payload[2], myMsg->payload[1], rtt_calc, myMsg->seq + 1, NULL, 0);
+							//dbg (COMMAND_CHANNEL, "Sending RTT from |Node: %hhu port %hhu| ---> |Node: %hhu port %hhu| \n", TOS_NODE_ID, myMsg->payload[2], myMsg->src, myMsg->payload[1]);
+							//sendTCP (0b01000011, myMsg->src, myMsg->payload[2], myMsg->payload[1], rtt_calc, myMsg->seq + 1, NULL, 0);
 
 							dbg (COMMAND_CHANNEL, "Sending ACK packet from |Node: %hhu port %hhu| ---> |Node: %hhu port %hhu| \n", TOS_NODE_ID, myMsg->payload[2], myMsg->src, myMsg->payload[1]);
-							sendTCP (0b01000001, myMsg->src, myMsg->payload[2], myMsg->payload[1], call Random.rand32(), myMsg->seq + 1, NULL, 0);
+							sendTCP (0b01000001, myMsg->src, myMsg->payload[2], myMsg->payload[1], call Random.rand32(), myMsg->seq + 1, &(socketTuple.RTT), sizeof(socketTuple.RTT));
 
 							// Begin sending data
 							if (socketTuple.isSender){
@@ -1722,8 +1730,10 @@ void printSockets(){
 
 		//dbg(COMMAND_CHANNEL, "SEQ NUMBER: %hhu\n", seq);
 
-		startTime = call clientTimer.getNow();
-		dbg (COMMAND_CHANNEL, "Start time is: %hhu\n", startTime );
+		//startTime = call clientTimer.getNow();
+		socketTuple.RTT = call clientTimer.getNow();
+		//dbg (COMMAND_CHANNEL, "Start time is: %hhu\n", startTime );
+		dbg (COMMAND_CHANNEL, "Start time is: %u\n", socketTuple.RTT );
 		line();
 		dbg (COMMAND_CHANNEL, "HANDSHAKE (1/3)\n");
 		dbg (COMMAND_CHANNEL, "Sending SYN packet from |Node: %hhu port %hhu| ---> |Node: %hhu port %hhu| \n", TOS_NODE_ID, srcPort, destination, destPort);
