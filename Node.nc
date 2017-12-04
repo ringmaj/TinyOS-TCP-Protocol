@@ -113,6 +113,8 @@ implementation{ // each node's private variables must be declared here, (or it w
 		uint8_t nodeSrcPort;
 		uint8_t nodeDestPort;
 
+		uint32_t rcvd_ack_time;
+
 
 	// Used in neighbor discovery
 	uint16_t neighbors [50];
@@ -725,38 +727,87 @@ void printSockets(){
 	data = &socketTuple.currentlyBeingTransferred;
 
 
-	dbg(TRANSPORT_CHANNEL, "last sent =  %hu\n",socketTuple.lastSent);
 
+
+
+	dbg(TRANSPORT_CHANNEL, "\n");
+
+	if(socketTuple.lastSent < socketTuple.transfer)
+	{
+		dbg(TRANSPORT_CHANNEL, "last sent =  %hu\n",socketTuple.lastSent);
+		dbg(TRANSPORT_CHANNEL, "last acked =  %hu\n",socketTuple.lastAck);
+	}
+
+
+	if(socketTuple.currentlyBeingTransferred == 0)
+		{
+			socketTuple.currentlyBeingTransferred = 1;
+			call Transport.updateSocketArray (socketTuple.fd, &socketTuple);
+		}
+
+
+	// check if there is still data left to transfer
+	if(socketTuple.currentlyBeingTransferred < socketTuple.transfer){
+		// stop and Wait
+
+		// very first data packet sent
 		if(socketTuple.lastSent == 0)
 		{
-
+			dbg(TRANSPORT_CHANNEL, "currentlyBeingTransferred: %hhu\n", socketTuple.currentlyBeingTransferred);
+			data = &socketTuple.currentlyBeingTransferred;
 			dbg(TRANSPORT_CHANNEL, "---------------------------------------------------------------------\n");
 			dbg (TRANSPORT_CHANNEL, "Beginning transmisson, sending first packet\n");
-			dbg (TRANSPORT_CHANNEL, "Node %hu sends | ACK, seq=%u, ack=%u\n", TOS_NODE_ID, socketTuple.seq, socketTuple.ack);
+			dbg (TRANSPORT_CHANNEL, "Node %hu sends | (Data: %hhu, seq=%u, ack=%u)\n", TOS_NODE_ID, *data, socketTuple.seq, socketTuple.ack);
 			socketTuple.lastSent = 1;
 			socketTuple.currentlyBeingTransferred = 1;
 
+			// add data to send buffer
+			socketTuple.sendBuff[0] = socketTuple.currentlyBeingTransferred;
+
+			dbg(TRANSPORT_CHANNEL, "buffer[0] = %hhu\n", socketTuple.sendBuff[0]);
 			call Transport.updateSocketArray (socketTuple.fd, &socketTuple);
+
+			// record time that ack should arrive before
+			rcvd_ack_time = call clientTimer.getNow() + socketTuple.RTT;
+			dbg(TRANSPORT_CHANNEL, "current time: %u\n", call clientTimer.getNow());
+			dbg(TRANSPORT_CHANNEL, "timeout: %u\n", rcvd_ack_time);
+
 			sendTCP (0b00010000, socketTuple.dest.addr, socketTuple.src, socketTuple.dest.port, socketTuple.seq, socketTuple.ack, data, 1);
+
 		}
-
-		// stop and Wait
-
-		/*void sendTCP (uint8_t flags, uint16_t destination, uint8_t srcPort, uint8_t destPort, uint32_t seq, uint32_t ack, uint8_t* TCPData, uint8_t dataLength) {	// Establishes a TCP connection from the client to the server by sending an SYN Packet to the server*/
-
-
-		// if the last packet has already been acked, then you are okay to send the next one
-		if(socketTuple.lastSent == socketTuple.lastAck)
+		else
 		{
-			socketTuple.currentlyBeingTransferred++;
-			call Transport.updateSocketArray (socketTuple.fd, &socketTuple);
-			sendTCP (0b00010000, socketTuple.dest.addr, socketTuple.src, socketTuple.dest.port, socketTuple.seq, socketTuple.ack, data, 1);
 
-			socketTuple.seq += 1;
-			socketTuple.lastSent += 1;
-			call Transport.updateSocketArray (socketTuple.fd, &socketTuple);
+			/*void sendTCP (uint8_t flags, uint16_t destination, uint8_t srcPort, uint8_t destPort, uint32_t seq, uint32_t ack, uint8_t* TCPData, uint8_t dataLength) {	// Establishes a TCP connection from the client to the server by sending an SYN Packet to the server*/
 
+
+			// if the last packet has already been acked, then you are okay to send the next one
+			if(socketTuple.lastSent == socketTuple.lastAck)
+			{
+				socketTuple.currentlyBeingTransferred++;
+				socketTuple.sendBuff[0] = socketTuple.currentlyBeingTransferred;
+				call Transport.updateSocketArray (socketTuple.fd, &socketTuple);
+				dbg(TRANSPORT_CHANNEL, "currentlyBeingTransferred: %hhu\n", socketTuple.currentlyBeingTransferred);
+				dbg(TRANSPORT_CHANNEL, "buffer[0] = %hhu\n", socketTuple.sendBuff[0]);
+
+
+				// record time that ack should arrive before
+				rcvd_ack_time = call clientTimer.getNow() + socketTuple.RTT;
+				dbg(TRANSPORT_CHANNEL, "current time: %u\n", call clientTimer.getNow());
+				dbg(TRANSPORT_CHANNEL, "timeout: %u\n", rcvd_ack_time);
+				dbg (TRANSPORT_CHANNEL, "Node %hu sends | (Data: %hhu, seq=%u, ack=%u)\n", TOS_NODE_ID, *data, socketTuple.seq, socketTuple.ack);
+				sendTCP (0b00010000, socketTuple.dest.addr, socketTuple.src, socketTuple.dest.port, socketTuple.seq, socketTuple.ack, data, 1);
+
+				socketTuple.seq += 1;
+				//socketTuple.lastSent += 1;
+				call Transport.updateSocketArray (socketTuple.fd, &socketTuple);
+
+			}
 		}
+
+
+	}
+
 
 
 
@@ -1001,6 +1052,7 @@ void printSockets(){
 						socket_t fd;
 						socket_addr_t address;
 						socket_addr_t * addr;
+						uint8_t * buffPtr;
 
 
 						case 0b10000000:	// SYN Packet
@@ -1093,7 +1145,7 @@ void printSockets(){
 
 
 
-									dbg (TRANSPORT_CHANNEL, "Node %hu sends | SYN+ACK, seq=0, ack=%u\n", TOS_NODE_ID, socketTuple.ack);
+									dbg (TRANSPORT_CHANNEL, "Node %hu sends | (SYN+ACK, seq=0, ack=%u)\n", TOS_NODE_ID, socketTuple.ack);
 								sendTCP (0b11000000, myMsg->src, myMsg->payload[2], myMsg->payload[1], socketTuple.seq, socketTuple.ack, NULL, 0);
 								//update seq
 								socketTuple.seq += 1;
@@ -1139,14 +1191,57 @@ void printSockets(){
 								line();
 								break;
 
+
+
+
+
 						case 0b01000000:	// ACK Packet
-							socketTuple.lastAck = *((uint32_t *)(&(myMsg->payload[3])) + 1);
+						  i = call socketHashMap.get(((myMsg->payload[2]) << 24)|((myMsg->payload[1]) << 16)| myMsg->src);
+						  socketTuple = call Transport.getSocketArray(i);
+							/*socketTuple.lastAck = *((uint32_t *)(&(myMsg->payload[3])) + 1);*/
+							//socketTuple.seq = *((uint32_t *)(myMsg->payload + 7)) + 1;
 							call Transport.updateSocketArray(socketTuple.fd, &socketTuple);
+
+							/*dbg (TRANSPORT_CHANNEL, "Received an ack from Node %hu  |  (Data: %hhu, seq=%u, ack=%u)\n", myMsg->src, *((uint8_t *)(myMsg->payload + 11)),*((uint32_t *)(myMsg->payload + 3)), *((uint8_t *)(myMsg->payload + 7)));*/
+
 							if (socketTuple.isSender){
 								//dbg (TRANSPORT_CHANNEL, "I'm the sender. Continuing TCP stream:\n");
-								continueTCPStream(socketTuple);
+
+								// if get the ack before timeout
+
+								dbg(TRANSPORT_CHANNEL, "received ack at time: %u\n", call clientTimer.getNow());
+								/*continueTCPStream(socketTuple);*/
+								if(call clientTimer.getNow() < rcvd_ack_time)
+								{
+									// update last sent
+									socketTuple.lastSent++;
+									socketTuple.lastAck++;
+									/*socketTuple.lastAck++;*/
+
+									//dbg(TRANSPORT_CHANNEL, "prev seq: %u\n", socketTuple.seq);
+									/*socketTuple.seq++;*/
+
+									call Transport.updateSocketArray(socketTuple.fd, &socketTuple);
+									//dbg(TRANSPORT_CHANNEL, "next seq: %u\n", socketTuple.seq);
+
+
+									dbg (TRANSPORT_CHANNEL, "Received an ack from Node %hu  |  (Data: %hhu, seq=%u, ack=%u)\n", myMsg->src, *((uint8_t *)(myMsg->payload + 11)),*((uint32_t *)(myMsg->payload + 3)), *((uint8_t *)(myMsg->payload + 7)));
+									continueTCPStream(socketTuple);
+								}
+								else // resend the packet, from sendBuff[0]
+								{
+									// update timeout
+									dbg(TRANSPORT_CHANNEL, "LATE PACKET! RESENDING\n");
+									rcvd_ack_time = call clientTimer.getNow() + socketTuple.RTT;
+									buffPtr = &socketTuple.sendBuff[0];
+									sendTCP (0b00010000, socketTuple.dest.addr, socketTuple.src, socketTuple.dest.port, socketTuple.seq, socketTuple.ack, buffPtr, 1);
+
+								}
+
 							}
 							break;
+
+
 
 
 						case 0b01000011: // received RTT value,
@@ -1165,7 +1260,7 @@ void printSockets(){
 
 						endTime = call clientTimer.getNow();
 						dbg (COMMAND_CHANNEL, "End time is: %hhu\n", endTime );
-						rtt_calc = startTime - endTime;
+						rtt_calc = endTime - startTime;
 						dbg (COMMAND_CHANNEL, "RTT is: %hhu\n", rtt_calc );
 
 							line();
@@ -1214,10 +1309,16 @@ void printSockets(){
 						// ack = seq + 1
 						socketTuple.ack = *((uint32_t *)(myMsg->payload + 3)) + 1;
 						socketTuple.seq += 1;
+
+						// save the ack as last acked!
+						socketTuple.lastAck = *((uint32_t *)(myMsg->payload + 7));
+
 						call Transport.updateSocketArray(i,&socketTuple);
 
 							dbg (TRANSPORT_CHANNEL, "Node %hu receives | SYN+ACK\n", TOS_NODE_ID);
-							dbg (TRANSPORT_CHANNEL, "Node %hu sends | ACK, seq=%u, ack=%u\n", TOS_NODE_ID, socketTuple.seq, socketTuple.ack);
+
+
+							dbg (TRANSPORT_CHANNEL, "Node %hu sends | (ACK, seq=%u, ack=%u)\n", TOS_NODE_ID, socketTuple.seq, socketTuple.ack);
 
 
 
@@ -1300,7 +1401,7 @@ void printSockets(){
 
 
 						case 0b00010000:	// data
-							dbg (TRANSPORT_CHANNEL, "Received a data packet from Node %hu  |  Data: %hhu, seq=%u, ack=%u\n", myMsg->src, *((uint8_t *)(myMsg->payload + 11)),*((uint32_t *)(myMsg->payload + 3)), *((uint8_t *)(myMsg->payload + 7)));
+							dbg (TRANSPORT_CHANNEL, "Received a data packet from Node %hu  |  (Data: %hhu, seq=%u, ack=%u)\n", myMsg->src, *((uint8_t *)(myMsg->payload + 11)),*((uint32_t *)(myMsg->payload + 3)), *((uint8_t *)(myMsg->payload + 7)));
 
 							// update socket, last acked
 							i = call socketHashMap.get(((myMsg->payload[2]) << 24)|((myMsg->payload[1]) << 16)| myMsg->src);
@@ -1311,12 +1412,13 @@ void printSockets(){
 
 							// new ack is the senders sequence + 1, expecting this as the next
 							socketTuple.ack = *((uint32_t *)(myMsg->payload + 3)) + 1;
+							socketTuple.currentlyBeingTransferred = *((uint8_t *)(myMsg->payload + 11));
 
 
 							// send an ACK
-							dbg(TRANSPORT_CHANNEL, "Sending ack to Node %hu  |  Data: %hhu, seq=%u, ack=%u\n", myMsg->src, *((uint8_t *)(myMsg->payload + 11)), socketTuple.seq, socketTuple.ack);
-							sendTCP (0b01000000, socketTuple.dest.addr, socketTuple.src, socketTuple.dest.port, socketTuple.seq, socketTuple.ack, NULL, 0);
-
+							dbg(TRANSPORT_CHANNEL, "Sending ack to Node %hu  |  (Data: %hhu, seq=%u, ack=%u)\n", myMsg->src, *((uint8_t *)(myMsg->payload + 11)), socketTuple.seq, socketTuple.ack);
+							sendTCP (0b01000000, socketTuple.dest.addr, socketTuple.src, socketTuple.dest.port, socketTuple.seq, socketTuple.ack, &socketTuple.currentlyBeingTransferred, 1);
+							call Transport.updateSocketArray(fd, &socketTuple);
 
 
 							break;
@@ -1594,7 +1696,7 @@ void printSockets(){
 		socketTuple.dest.addr = destination;
 		socketTuple.dest.port = destPort;
 		socketTuple.isSender = TRUE;
-		socketTuple.transfer = 10;
+		socketTuple.transfer = 100;
 		socketTuple.currentlyBeingTransferred  = 0;
 		socketTuple.lastSent = 0;	// 0 bytes have been sent so far
 		call Transport.updateSocketArray(fd, &socketTuple);
@@ -1623,7 +1725,7 @@ void printSockets(){
 		dbg (COMMAND_CHANNEL, "HANDSHAKE (1/3)\n");
 		dbg (COMMAND_CHANNEL, "Sending SYN packet from |Node: %hhu port %hhu| ---> |Node: %hhu port %hhu| \n", TOS_NODE_ID, srcPort, destination, destPort);
 
-		dbg (TRANSPORT_CHANNEL, "Node %hu sends | SYN, seq=%u\n", TOS_NODE_ID, seq);
+		dbg (TRANSPORT_CHANNEL, "Node %hu sends | (SYN, seq=%u)\n", TOS_NODE_ID, seq);
 		// update socket State
 		socketTuple.state = SYN_SENT;
 		socketTuple.seq = 0;
