@@ -625,8 +625,11 @@ void printSockets(){
 		}
 		//----------------------------------------------------------------------------------------------------------------------------------------
 
+		dbg(TRANSPORT_CHANNEL, "\n");
+		dbg(TRANSPORT_CHANNEL, "\n");
+
 		// check if our sendBuffer is full, if it is, change lastSent to 0 and reallocate the sendBuff to fit all of the new data
-		if(socketTuple.lastSent == socketTuple.transfer){
+		if(socketTuple.numberOfBytesSentAndAcked == socketTuple.transfer){
 			dbg(TRANSPORT_CHANNEL, "SendBuff full, reallocating!\n");
 			socketTuple.lastSent = 0;
 
@@ -647,12 +650,9 @@ void printSockets(){
 
 	 // record time that ack should arrive before
 	 rcvd_ack_time = call clientTimer.getNow() + socketTuple.RTT;
-
 	 dbg(TRANSPORT_CHANNEL, "current time: %u\n", call clientTimer.getNow());
 	 dbg(TRANSPORT_CHANNEL, "timeout: %u\n", rcvd_ack_time);
 
-	 // add the timeout to our timeout array
-	 socketTuple.timeout[lastSent] = rcvd_ack_time;
 
 		// increment last sent since a packet was just sent
 		socketTuple.lastSent++;
@@ -660,12 +660,15 @@ void printSockets(){
 		// Update socket array
 		call Transport.updateSocketArray (socketTuple.fd, &socketTuple);
 
-		sendTCP (0b00010000, socketTuple.dest.addr, socketTuple.src, socketTuple.dest.port, socketTuple.seq, socketTuple.ack, data, 1);
+		sendTCP (0b00010000, socketTuple.dest.addr, socketTuple.src, socketTuple.dest.port, socketTuple.seq, socketTuple.ack, data, socketTuple.sndWndSize);
 
+	}
+	else
+	{
+			dbg(TRANSPORT_CHANNEL, "Done transmitting!\n");
 	}
 
 
-	dbg(TRANSPORT_CHANNEL, "Done transmitting!\n");
 
 	}
 
@@ -1041,10 +1044,9 @@ void printSockets(){
 									// update last sent
 									socketTuple.lastSent++;
 									socketTuple.lastAck++;
-									/*socketTuple.lastAck++;*/
 
-									//dbg(TRANSPORT_CHANNEL, "prev seq: %u\n", socketTuple.seq);
-									/*socketTuple.seq++;*/
+									socketTuple.numberOfBytesSentAndAcked++;
+									socketTuple.seq++;
 
 									call Transport.updateSocketArray(socketTuple.fd, &socketTuple);
 									//dbg(TRANSPORT_CHANNEL, "next seq: %u\n", socketTuple.seq);
@@ -1430,9 +1432,6 @@ void printSockets(){
 		socket_addr_t * addr;
 		socket_t fd;
 		socket_store_t socketTuple;
-		
-		// Window size is 9 B * 6
-
 
 		// change port to one from cmd
 		ad.port = port;
@@ -1531,10 +1530,11 @@ void printSockets(){
 		socketTuple.transfer = 10;
 		socketTuple.numberOfBytesSentAndAcked  = 0;
 		socketTuple.lastSent = 0;	// 0 bytes have been sent so far
+		socketTuple.sndWndSize = 3;
 
 
 		// allocate the buffer
-		for(i = 0; i < transfer; i++){
+		for(i = 1; i <= transfer; i++){
 			if( i < 128)
 				socketTuple.sendBuff[i] = i;
 		}
