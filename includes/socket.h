@@ -46,7 +46,7 @@ typedef struct socket_store_t{
     socket_t fd;
 
     // holds the the sequence number for the first packet in our sending window. Used to update the next packets seq num
-    uint16_t sndWndSeq;
+    uint16_t sndWndSize;
 
     nx_uint16_t srcAddr;
     socket_port_t src;
@@ -60,9 +60,13 @@ typedef struct socket_store_t{
     // This is the sender portion.
     uint8_t sendBuff[SOCKET_BUFFER_SIZE];
     uint32_t timeOut[SOCKET_BUFFER_SIZE]; // stores the timeouts for each packet sent
+    uint8_t ackReceived[SOCKET_BUFFER_SIZE];
     uint8_t lastWritten;
     uint8_t lastAck;	//Number of bytes that have been sent to the other node THAT HAVE BEEN ACKNOWLEDGED
     uint8_t lastSent;	//Number of bytes that have been sent to the other node
+
+    int lastUnackedSentByte;
+
 
     // This is the receiver portion
     uint8_t rcvdBuff[SOCKET_BUFFER_SIZE];
