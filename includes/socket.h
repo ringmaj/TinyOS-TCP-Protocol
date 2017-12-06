@@ -58,6 +58,7 @@ typedef struct socket_store_t{
 
     // This is the sender portion.
     uint8_t sendBuff[SOCKET_BUFFER_SIZE];
+    uint32_t timeOut[SOCKET_BUFFER_SIZE]; // stores the timeouts for each packet sent
     uint8_t lastWritten;
     uint8_t lastAck;	//Number of bytes that have been sent to the other node THAT HAVE BEEN ACKNOWLEDGED
     uint8_t lastSent;	//Number of bytes that have been sent to the other node
