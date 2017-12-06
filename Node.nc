@@ -615,10 +615,10 @@ void printSockets(){
 
 
 	// if there is still data to send, we haven't reached the end of our sendBuffer
-	if(socketTuple.currentlyBeingTransferred < socketTuple.transfer){
+	if(socketTuple.numberOfBytesSentAndAcked < socketTuple.transfer){
 
 		// Sending our first packet
-		if(socketTuple.currentlyBeingTransferred == 0)
+		if(socketTuple.numberOfBytesSentAndAcked == 0)
 		{
 			dbg(TRANSPORT_CHANNEL, "---------------------------------------------------------------------\n");
 			dbg (TRANSPORT_CHANNEL, "Beginning transmisson, sending first packet\n");
@@ -631,7 +631,7 @@ void printSockets(){
 			socketTuple.lastSent = 0;
 
 			// reallocate sendBuff
-			j = socketTuple.currentlyBeingTransferred;
+			j = socketTuple.numberOfBytesSentAndAcked;
 			for(i = 0; i < socketTuple.transfer; i++){
 					socketTuple.sendBuff[i] = j;
 					j++;
@@ -663,100 +663,6 @@ void printSockets(){
 
 
 	dbg(TRANSPORT_CHANNEL, "Done transmitting!\n");
-
-	/*// check if there is still data left to transfer
-	if(socketTuple.currentlyBeingTransferred < socketTuple.transfer){
-		// stop and Wait
-		// very first data packet sent
-		if(socketTuple.lastSent == 0)
-		{
-			dbg(TRANSPORT_CHANNEL, "currentlyBeingTransferred: %hhu\n", socketTuple.currentlyBeingTransferred);
-			data = &socketTuple.currentlyBeingTransferred;
-			dbg(TRANSPORT_CHANNEL, "---------------------------------------------------------------------\n");
-			dbg (TRANSPORT_CHANNEL, "Beginning transmisson, sending first packet\n");
-			dbg (TRANSPORT_CHANNEL, "Node %hu sends | (Data: %hhu, seq=%u, ack=%u)\n", TOS_NODE_ID, *data, socketTuple.seq, socketTuple.ack);
-			socketTuple.lastSent = 1;
-			socketTuple.currentlyBeingTransferred = 1;
-
-			// add data to send buffer
-			socketTuple.sendBuff[0] = socketTuple.currentlyBeingTransferred;
-
-			dbg(TRANSPORT_CHANNEL, "buffer[0] = %hhu\n", socketTuple.sendBuff[0]);
-			call Transport.updateSocketArray (socketTuple.fd, &socketTuple);
-
-			// record time that ack should arrive before
-			rcvd_ack_time = call clientTimer.getNow() + socketTuple.RTT;
-			dbg(TRANSPORT_CHANNEL, "current time: %u\n", call clientTimer.getNow());
-			dbg(TRANSPORT_CHANNEL, "timeout: %u\n", rcvd_ack_time);
-
-			sendTCP (0b00010000, socketTuple.dest.addr, socketTuple.src, socketTuple.dest.port, socketTuple.seq, socketTuple.ack, data, 1);
-
-		}
-		else
-		{
-
-			void sendTCP (uint8_t flags, uint16_t destination, uint8_t srcPort, uint8_t destPort, uint32_t seq, uint32_t ack, uint8_t* TCPData, uint8_t dataLength) {	// Establishes a TCP connection from the client to the server by sending an SYN Packet to the server
-
-
-			// if the last packet has already been acked, then you are okay to send the next one
-			if(socketTuple.lastSent == socketTuple.lastAck)
-			{
-				socketTuple.currentlyBeingTransferred++;
-				socketTuple.sendBuff[0] = socketTuple.currentlyBeingTransferred;
-				call Transport.updateSocketArray (socketTuple.fd, &socketTuple);
-				dbg(TRANSPORT_CHANNEL, "currentlyBeingTransferred: %hhu\n", socketTuple.currentlyBeingTransferred);
-				dbg(TRANSPORT_CHANNEL, "buffer[0] = %hhu\n", socketTuple.sendBuff[0]);
-
-
-				// record time that ack should arrive before
-				rcvd_ack_time = call clientTimer.getNow() + socketTuple.RTT;
-				dbg(TRANSPORT_CHANNEL, "current time: %u\n", call clientTimer.getNow());
-				dbg(TRANSPORT_CHANNEL, "timeout: %u\n", rcvd_ack_time);
-				dbg (TRANSPORT_CHANNEL, "Node %hu sends | (Data: %hhu, seq=%u, ack=%u)\n", TOS_NODE_ID, *data, socketTuple.seq, socketTuple.ack);
-				sendTCP (0b00010000, socketTuple.dest.addr, socketTuple.src, socketTuple.dest.port, socketTuple.seq, socketTuple.ack, data, 1);
-
-				socketTuple.seq += 1;
-				//socketTuple.lastSent += 1;
-				call Transport.updateSocketArray (socketTuple.fd, &socketTuple);
-
-			}
-		}
-
-
-	}*/
-
-		/*//socket_store_t sock;
-		uint8_t bytesToSend = 9;
-		dbg (COMMAND_CHANNEL, "this function (continueTCPStream) should check if there is enough window size, and send if so. Or else do nothing\n");
-
-		if (socketTuple.fd == 255) {
-			dbg (COMMAND_CHANNEL, "Error: continueTCPStream called with an uninitialized socket\n");
-			return;
-		}
-
-		//sock = Transport.getSocketArray(fd)
-		dbg (COMMAND_CHANNEL, "lastAck == %, lastSent == % \n", socketTuple.lastAck, socketTuple.lastSent);
-		if (socketTuple.lastAck > socketTuple.lastSent) {
-			// send another packet
-			if (bytesToSend > socketTuple.effectiveWindow) { // bytesToSend = min(windowSize, transferLeft, 9)
-				bytesToSend = socketTuple.effectiveWindow;
-			}
-			if (bytesToSend > socketTuple.currentlyBeingTransferred) {
-				bytesToSend = socketTuple.currentlyBeingTransferred;
-			}
-
-
-			sendTCP (0b00010000, socketTuple.dest.addr, socketTuple.src, socketTuple.dest.port, socketTuple.seq, socketTuple.ack, (uint8_t*)(&(socketTuple.sendBuff)), bytesToSend);
-			socketTuple.currentlyBeingTransferred -= bytesToSend;
-			socketTuple.lastSent += bytesToSend;
-			socketTuple.seq++;
-			//socketTuple.lastSent += min(windowSize, dataAvailable)%9;
-		} else {
-			dbg (COMMAND_CHANNEL, "Can't send any more data. The effective window (%hhu) is full. Last sent byte was: %hhu\n", socketTuple.effectiveWindow, socketTuple.lastSent);
-		}
-
-
-		call Transport.updateSocketArray (socketTuple.fd, &socketTuple);*/
 
 	}
 
@@ -1334,7 +1240,7 @@ void printSockets(){
 
 								// send an ACK
 								dbg(TRANSPORT_CHANNEL, "Sending ack to Node %hu  |  (Data: %hhu, seq=%u, ack=%u)\n", myMsg->src, *((uint8_t *)(myMsg->payload + 11)), socketTuple.seq, socketTuple.ack);
-								sendTCP (0b01000000, socketTuple.dest.addr, socketTuple.src, socketTuple.dest.port, socketTuple.seq, socketTuple.ack, &socketTuple.currentlyBeingTransferred, 1);
+								sendTCP (0b01000000, socketTuple.dest.addr, socketTuple.src, socketTuple.dest.port, socketTuple.seq, socketTuple.ack, &socketTuple.numberOfBytesSentAndAcked, 1);
 							}
 
 
@@ -1617,7 +1523,7 @@ void printSockets(){
 		socketTuple.dest.port = destPort;
 		socketTuple.isSender = TRUE;
 		socketTuple.transfer = 10;
-		socketTuple.currentlyBeingTransferred  = 0;
+		socketTuple.numberOfBytesSentAndAcked  = 0;
 		socketTuple.lastSent = 0;	// 0 bytes have been sent so far
 
 
