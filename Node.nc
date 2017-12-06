@@ -647,9 +647,12 @@ void printSockets(){
 
 	 // record time that ack should arrive before
 	 rcvd_ack_time = call clientTimer.getNow() + socketTuple.RTT;
+
 	 dbg(TRANSPORT_CHANNEL, "current time: %u\n", call clientTimer.getNow());
 	 dbg(TRANSPORT_CHANNEL, "timeout: %u\n", rcvd_ack_time);
 
+	 // add the timeout to our timeout array
+	 socketTuple.timeout[lastSent] = rcvd_ack_time;
 
 		// increment last sent since a packet was just sent
 		socketTuple.lastSent++;
@@ -1521,6 +1524,9 @@ void printSockets(){
 		socket_addr_t * addr;
 		socket_t fd;
 		socket_store_t socketTuple;
+		
+		// Window size is 9 B * 6
+
 
 		// change port to one from cmd
 		ad.port = port;
