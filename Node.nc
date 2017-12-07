@@ -813,7 +813,10 @@ void printSockets(){
 
 	//change
 		// Before the timeout, check if the ack has already arrived, automatically updates ackReceived
+
+
 		findTimeOuts(timeOutCheckTuple);
+
 
 		dbg(TRANSPORT_CHANNEL, "ACK Check!\n");
 	}
@@ -1097,6 +1100,7 @@ void printSockets(){
 								dbg(TRANSPORT_CHANNEL, "received ack at time: %u\n", call clientTimer.getNow());
 								dbg (TRANSPORT_CHANNEL, "bytes acked: %hhu\n", socketTuple.numberOfBytesSentAndAcked);
 								dbg (TRANSPORT_CHANNEL, "last sent: %hhu\n", socketTuple.lastSent);
+								dbg(TRANSPORT_CHANNEL,"Last successfully sent seq: %u\n", socketTuple.lastSuccessfulSeq);
 								dbg (TRANSPORT_CHANNEL, "lowestUnackedSentByte: %u\n", socketTuple.lowestUnackedSentByte);
 								dbg (TRANSPORT_CHANNEL, "timeOut[0]: %u\n", socketTuple.timeOut[0]);
 
@@ -1107,6 +1111,7 @@ void printSockets(){
 									socketTuple.lastAck++;
 
 									socketTuple.numberOfBytesSentAndAcked++;
+									socketTuple.lastSuccessfulSeq = socketTuple.seq;
 									socketTuple.seq += 9;
 									//socketTuple.ackReceived [socketTuple.seq - ] = 1;
 
