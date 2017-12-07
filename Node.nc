@@ -513,7 +513,7 @@ void findTimeOuts(socket_store_t socketTuple){
 
 	for(i = 0; i < socketTuple.transfer; i++)
 		{
-			dbg(TRANSPORT_CHANNEL, "timeout is: %u\n", socketTuple.timeOut[i]);
+			dbg(TRANSPORT_CHANNEL, "timeout is: %u\t RTT: %u\n", socketTuple.timeOut[i], socketTuple.RTT);
 			if(call clientTimer.getNow() > socketTuple.timeOut[i] && socketTuple.ackReceived[i] == 0) // check if the timeout has passed without receiving an ack.
 				socketTuple.ackReceived[i] = 0;
 			else
@@ -705,7 +705,9 @@ void printSockets(){
 			timeOutCheckTuple = socketTuple;
 
 			 dbg(TRANSPORT_CHANNEL, "BEFORE CLIENT TIMER: %u\n", call clientTimer.getNow());
-			call clientTimer.startOneShot(rcvd_ack_time/1000);
+			/*call clientTimer.startOneShot(rcvd_ack_time/1000);*/
+			call clientTimer.startOneShot(socketTuple.RTT);
+
 			dbg(TRANSPORT_CHANNEL, "AFTER CLIENT TIMER: %u\n", call clientTimer.getNow());
 
 			// increase lowestUnackedSentByte by 1 and send in order to get the timeout for the next packet
@@ -1125,7 +1127,8 @@ void printSockets(){
 									dbg(TRANSPORT_CHANNEL, "---------------------------------------------------------------------\n");
 									dbg(TRANSPORT_CHANNEL, "LATE PACKET! RESENDING\n");
 									dbg(TRANSPORT_CHANNEL, "---------------------------------------------------------------------\n");
-									rcvd_ack_time = call clientTimer.getNow() + (21*socketTuple.RTT)/10;
+									rcvd_ack_time = call clientTimer.getNow() + socketTuple.RTT;
+									/*rcvd_ack_time = call clientTimer.getNow() + (21*socketTuple.RTT)/10;*/
 									buffPtr = &socketTuple.sendBuff[0];
 									dbg (TRANSPORT_CHANNEL, "Node %hu resends | (Data: %hhu, seq=%u, ack=%u)\n", TOS_NODE_ID, *buffPtr, socketTuple.seq, socketTuple.ack);
 									sendTCP (0b00010000, socketTuple.dest.addr, socketTuple.src, socketTuple.dest.port, socketTuple.seq, socketTuple.ack, buffPtr, 1);
