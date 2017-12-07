@@ -45,7 +45,7 @@ typedef struct socket_store_t{
     // stores the socket fd
     socket_t fd;
 
-    // holds the the sequence number for the first packet in our sending window. Used to update the next packets seq num
+    // Stores the window size, total number of packets that can be send without receiving an ack
     uint16_t sndWndSize;
 
     nx_uint16_t srcAddr;
@@ -58,9 +58,9 @@ typedef struct socket_store_t{
     uint32_t ack;	// Acknowledgement number  = (index in receiveBuff of next byte to recieve) + 1
 
     // This is the sender portion.
-    uint8_t sendBuff[SOCKET_BUFFER_SIZE];
+	uint8_t sendBuff[SOCKET_BUFFER_SIZE];
     uint32_t timeOut[SOCKET_BUFFER_SIZE]; // stores the timeouts for each packet sent
-    uint8_t ackReceived[SOCKET_BUFFER_SIZE];
+    uint8_t ackReceived[SOCKET_BUFFER_SIZE];//Sender's boolean array, indicating whether a byte in sendBuff has been ACKed by the receiver. Initially (before the message is sent), this is filled with all 0's. Finally (after all data is sent) this is filled with all 1's. ackReceived[i] is 1 if and only if the "i"th byte in sendBuff has been ACKed, and is 0 otherwise. This gets updated when receiving an ACK packet
     uint8_t lastWritten;
     uint8_t lastAck;	//Number of bytes that have been sent to the other node THAT HAVE BEEN ACKNOWLEDGED
     uint8_t lastSent;	//Number of bytes that have been sent to the other node
