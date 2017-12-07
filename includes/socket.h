@@ -65,7 +65,7 @@ typedef struct socket_store_t{
     uint8_t lastAck;	//Number of bytes that have been sent to the other node THAT HAVE BEEN ACKNOWLEDGED
     uint8_t lastSent;	//Number of bytes that have been sent to the other node
 
-    int lastUnackedSentByte;
+    int lowestUnackedSentByte;
 
 
     // This is the receiver portion
@@ -77,6 +77,7 @@ typedef struct socket_store_t{
     uint32_t RTT;
     uint16_t lastSentTime;
     uint8_t effectiveWindow;
+
 }socket_store_t;
 
 #endif
