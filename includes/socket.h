@@ -66,6 +66,7 @@ typedef struct socket_store_t{
     uint8_t lastSent;	//Number of bytes that have been sent to the other node
 
     int lowestUnackedSentByte;
+    int lastSuccessfulSeq; // records the last seq that was successfully sent and received an ack
 
 
     // This is the receiver portion
