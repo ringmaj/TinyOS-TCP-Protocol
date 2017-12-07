@@ -179,7 +179,7 @@ def main():
 	# s.cmdTestServer (1, 4);
 	# s.runTime(10);
 	#s.cmdTestClient (1, 2, 1, 2);
-	s.cmdTestClient (1, 2, 2, 4, 5);
+	s.cmdTestClient (1, 2, 2, 4, 2);
 	s.runTime(10);
 	#clientclose srcport and destport are backwards
 	s.cmdClientClose (1, 2, 4, 2);
