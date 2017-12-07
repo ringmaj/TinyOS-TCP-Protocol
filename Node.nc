@@ -504,16 +504,20 @@ void line(){
 
 void findTimeOuts(socket_store_t socketTuple){
 	int i;
+	int timeNow = call clientTimer.getNow();
 
 	dbg (COMMAND_CHANNEL, "\n");
 	dbg (COMMAND_CHANNEL, "Node %hhu's received ACKS: \n", TOS_NODE_ID);
+	dbg(TRANSPORT_CHANNEL, "Time Now is: %u\n", timeNow);
+
 
 	for(i = 0; i < 128; i++)
 		{
+			dbg(TRANSPORT_CHANNEL, "timeout is: %u\n", socketTuple.timeOut[i]);
 			if(call clientTimer.getNow() > socketTuple.timeOut[i])
-				socketTuple.ackReceived[i] = TRUE;
+				socketTuple.ackReceived[i] = 0;
 			else
-				socketTuple.ackReceived[i] = FALSE;
+				socketTuple.ackReceived[i] = 1;
 		}
 
 
@@ -805,6 +809,8 @@ void printSockets(){
 
 		// Before the timeout, check if the ack has already arrived, automatically updates ackReceived
 		findTimeOuts(timeOutCheckTuple);
+
+		dbg(TRANSPORT_CHANNEL, "ACK Check!\n");
 	}
 
 	event void lastFinTimer.fired () {
