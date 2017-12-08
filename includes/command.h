@@ -7,7 +7,7 @@
 
 #ifndef COMMAND_H
 #define COMMAND_H
- 
+
 //Command ID Number
 enum{
 	CMD_PING = 0,
@@ -17,7 +17,10 @@ enum{
 	CMD_TEST_CLIENT=4,
 	CMD_TEST_SERVER=5,
 	CMD_KILL=6,
-	CMD_ERROR=9
+	CMD_MSG=7,	//for app mesages between client and server
+	CMD_ERROR=9,
+	CMD_CLIENT_APP=8,	//to set up app client
+	CMD_SERVER_APP=10	//to set up the app server
 };
 
 enum{
