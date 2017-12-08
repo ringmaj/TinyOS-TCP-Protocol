@@ -117,6 +117,8 @@ implementation{ // each node's private variables must be declared here, (or it w
 		uint32_t rcvd_ack_time;	// Timeout, if you haven't received an ack by this time, then the packet is lost, resend. How long the sender should wait for an ACK, before re-sending
 		socket_store_t timeOutCheckTuple; // used to check for timeouts
 
+		unAckedPackets timeoutPacketCheck;
+
 
 	// Used in neighbor discovery
 	uint16_t neighbors [50];
@@ -642,7 +644,7 @@ void printSockets(){
 
 
 		dbg(TRANSPORT_CHANNEL, "Number of Bytes Sent and Acked: %hhu\n", socketTuple.numberOfBytesSentAndAcked);
-		dbg(TRANSPORT_CHANNEL, "Transfer: %hhu\n", socketTuple.transfer);
+		dbg(TRANSPORT_CHANNEL, "Transfer: %hu\n", socketTuple.transfer);
 
 
 		// if there is still data to send, we haven't reached the end of our sendBuffer
@@ -708,8 +710,8 @@ void printSockets(){
 			if ((socketTuple.transfer - socketTuple.lastSent) < dataBytesInPack) {
 				dataBytesInPack = socketTuple.transfer - socketTuple.lastSent;
 
-				/*for(i = 0; i < 9 - dataBytesInPack + 1; i++)
-				socketTuple.sendBuff[socketTuple.lastSent + dataBytesInPack + i] = 00;*/
+				for(i = 0; i < 9 - dataBytesInPack + 1; i++)
+				socketTuple.sendBuff[socketTuple.lastSent + dataBytesInPack + i] = 0;
 
 
 			}
@@ -719,9 +721,27 @@ void printSockets(){
 
 			// update the unackedPacket Queue
 			unverifiedPacket.index = socketTuple.lastSent;
-			unverifiedPacket.ack = socketTuple.seq;
+			unverifiedPacket.seq = socketTuple.seq;
+			unverifiedPacket.ack = socketTuple.ack;
 			unverifiedPacket.timeOut = rcvd_ack_time;
 			unverifiedPacket.bytes = dataBytesInPack;
+			unverifiedPacket.data = data;
+			unverifiedPacket.destAddr = socketTuple.dest.addr;
+			unverifiedPacket.srcPort = socketTuple.src;
+			unverifiedPacket.destPort = socketTuple.dest.port;
+
+
+
+			/*int index;
+	    int ack;
+	    int seq;
+	    uint8_t * data;
+	    uint32_t timeOut;
+	    int bytes;
+
+	    uint16_t destAddr;
+	    socket_port_t srcPort;
+	    socket_port_t destPort;*/
 
 
 
@@ -738,16 +758,24 @@ void printSockets(){
 
 
 
-			sendTCP (0b00010000, socketTuple.dest.addr, socketTuple.src, socketTuple.dest.port, socketTuple.seq, socketTuple.ack, data, dataBytesInPack);
-			/*sendTCP (0b00010000, socketTuple.dest.addr, socketTuple.src, socketTuple.dest.port, socketTuple.seq, socketTuple.ack, data, 9);*/
+			/*sendTCP (0b00010000, socketTuple.dest.addr, socketTuple.src, socketTuple.dest.port, socketTuple.seq, socketTuple.ack, data, dataBytesInPack);*/
+			sendTCP (0b00010000, socketTuple.dest.addr, socketTuple.src, socketTuple.dest.port, socketTuple.seq, socketTuple.ack, data, 9);
 
 
 			// save the current tuple we are going to use to check for timeouts
 			timeOutCheckTuple = socketTuple;
 
 
-			 // Wait 1 RTT and check if the ack has arrived yet, if not resend the packet
-			  call clientTimer.startOneShot(socketTuple.RTT);
+
+
+				// saves the currently sent packet into a unAckedPackets struct, inside of our unackedQueue
+				timeoutPacketCheck.index = socketTuple.lastSent;
+				timeoutPacketCheck.ack = socketTuple.seq;
+				timeoutPacketCheck.timeOut = rcvd_ack_time;
+				timeoutPacketCheck.bytes = dataBytesInPack;
+
+				// Wait 1 RTT and check if the ack has arrived yet, if not resend the packet
+				 call clientTimer.startOneShot(socketTuple.RTT);
 
 			// increase lowestUnackedSentByte by 1 and send in order to get the timeout for the next packet
 			socketTuple.lowestUnackedSentByte++;
@@ -757,7 +785,7 @@ void printSockets(){
 		else
 		{
 				dbg(TRANSPORT_CHANNEL, "Done transmitting!\n");
-				dbg (CLEAN_OUTPUT,"Bytes sent/acked: %hhu\t Transfer: %u\n", socketTuple.numberOfBytesSentAndAcked ,socketTuple.transfer);
+				dbg (CLEAN_OUTPUT,"Bytes sent/acked: %hhu\t Transfer: %hu\n", socketTuple.numberOfBytesSentAndAcked ,socketTuple.transfer);
 
 		}
 
@@ -853,6 +881,18 @@ void printSockets(){
 // no longer needed
 	event void clientTimer.fired () {	// handle timeout. Client has sent a packet, but not been acked yet. So we assume it hasn't arrived at the recipient, and needs to be re-sent
 
+	// get the first element in the unackedQueue
+	unAckedPackets resentPacket;
+	resentPacket =  (call ackQ.element(0));
+
+	// if our unackedQueue still has the same starting element, then that means we have reached a timeout, resend the packet from the ackQueue
+	if(call clientTimer.getNow() >= (call ackQ.element(0)).timeOut)
+	{
+		dbg (CLEAN_OUTPUT, "LATE! RESENDING\n");
+		sendTCP (0b00010000, resentPacket.destAddr, resentPacket.srcPort, resentPacket.destPort, resentPacket.seq, resentPacket.ack, resentPacket.data, resentPacket.bytes);
+
+		//sendTCP (0b00010000, socketTuple.dest.addr, socketTuple.src, socketTuple.dest.port, socketTuple.seq, socketTuple.ack, data, 9);
+	}
 	//change
 		// Before the timeout, check if the ack has already arrived, automatically updates ackReceived
 
@@ -1658,7 +1698,7 @@ void printSockets(){
 		nodeSrcPort = srcPort;
 		nodeDestPort = destPort;*/
 
-		dbg (COMMAND_CHANNEL, "Destination: %hhu, srcPort: %hhu, destPort: %hhu, transfer: %hhu\n", destination, srcPort, destPort, transfer);
+		dbg (COMMAND_CHANNEL, "Destination: %hhu, srcPort: %hhu, destPort: %hhu, transfer: %hu\n", destination, srcPort, destPort, transfer);
 
 
 		ad.port = srcPort;
@@ -1724,7 +1764,7 @@ void printSockets(){
 		call Transport.updateSocketArray(fd, &socketTuple);
 
 		printSockets();
-		sendTCP (0b10000000, destination, srcPort, destPort, seq, 0, (uint8_t *)(&transfer), sizeof (transfer));	// SYN
+		sendTCP (0b10000000, destination, srcPort, destPort, seq, 0, (uint16_t *)(&transfer), sizeof (transfer));	// SYN
 
 		// add ((srcPort << 24)|(destPort << 16)|(destAddress)) to hashtable to look up file descriptor "fd" faster next time. "fd" will be used to look up the port in socketArray
 		call socketHashMap.insert ((srcPort << 24)|(destPort << 16)|(destination), fd);
@@ -1790,15 +1830,15 @@ void printSockets(){
 		event void CommandHandler.setAppServer(uint8_t port){
 	 		//call setTestServer(port);
 	 		// do other stuff with application???
-	 		dbg (TRANSPORT_CHANNEL, "Called setAppServer! port is: %hhu\n", port);
+	 		dbg (CLEAN_OUTPUT, "Called setAppServer! port is: %hhu\n", port);
 	 	}
 
 	 	event void CommandHandler.setAppClient(uint16_t destination, uint8_t srcPort, uint8_t destPort){
-	 		dbg (TRANSPORT_CHANNEL, "Called setAppClient! destination: %hu, srcPort: %hhu, destPort: %hhu\n", destination, srcPort, destPort);
+	 		dbg (CLEAN_OUTPUT, "Called setAppClient! destination: %hu, srcPort: %hhu, destPort: %hhu\n", destination, srcPort, destPort);
 	 	}
 
 	 	event void CommandHandler.appClientSend(uint16_t destination, uint8_t srcPort, uint8_t destPort, uint8_t * message){
-	 		dbg (TRANSPORT_CHANNEL, "Called appClientSend! Message is: %s\n", (char *)message);
+	 		dbg (CLEAN_OUTPUT, "Called appClientSend! Message is: %s\n", (char *)message);
 	 	}
 
 	void makePack(pack *Package, uint16_t src, uint16_t dest, uint16_t TTL, uint16_t protocol, uint16_t seq, uint8_t* payload, uint8_t length){
