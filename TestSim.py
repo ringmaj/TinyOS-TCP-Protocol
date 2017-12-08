@@ -19,6 +19,10 @@ class TestSim:
 	CMD_TEST_CLIENT=4
 	CMD_TEST_SERVER=5
 	CMD_KILL=6
+	CMD_MSG=7          
+	CMD_CLIENT_APP=8    #to set up app client
+	CMD_SERVER_APP=10	#to set up the app server
+
 
 	# CHANNELS - see includes/channels.h
 	COMMAND_CHANNEL="command";
@@ -33,6 +37,7 @@ class TestSim:
 
 	# Project 3
 	TRANSPORT_CHANNEL="transport";
+	CLEAN_OUTPUT='cleanoutput'
 
 	# Personal Debuggin Channels for some of the additional models implemented.
 	HASHMAP_CHANNEL="hashmap";
@@ -156,6 +161,19 @@ class TestSim:
 		self.sendCMD (self.CMD_KILL, source, "{0}{1}{2}".format(chr(destination), chr(srcPort), chr(destPort)));
 		#self.sendCMD (self.CMD_KILL, destination, "close command");
 
+	def cmdSetAppServer(self, source, port):
+		#print("{0}".format(chr(port)));
+		self.sendCMD (self.CMD_SERVER_APP, source, "{0}".format(chr(port)));
+
+	def cmdSetAppClient(self, source, destination, srcPort, destPort):
+		self.sendCMD(self.CMD_CLIENT_APP, source, "{0}{1}{2}".format(chr(destination), chr(srcPort), chr(destPort)));
+		#print("{0}{1}{2}".format(chr(destination), chr(srcPort), chr(destPort)));
+		#self.sendCMD(self.CMD_CLIENT_APP, source, "{0}{1}{2}".format(chr(destination), chr(srcPort), chr(destPort)));
+
+	def cmdSendText(self, source, destination, srcPort, destPort, message):
+		#print("{0}{1}{2}{3}".format(chr(destination), chr(srcPort), chr(destPort), message));
+		self.sendCMD(self.CMD_MSG, source, "{0}{1}{2}{3}".format(chr(destination), chr(srcPort), chr(destPort), message));
+
 		#remember that whitespace matters in python. This file uses spaces but not tabs
 
 def main():
@@ -174,6 +192,16 @@ def main():
 	s.runTime(10);
 	s.cmdTestServer (2, 4);
 	s.runTime(10);
+
+
+	s.cmdSetAppServer(2, 41);	#Set Node 2 as an application server at port 41
+	s.runTime(10);
+	#s.cmdSetAppClient(1, 2, 3, 41);	#Set Node 1 as a n application client, that uses port 3 to use the webapp to connect to server 2 at server port 41
+	s.runTime(10);
+	s.cmdSendText(1, 2, 2, 4, "Hello");
+	s.runTime(10);
+
+
 	# s.cmdTestServer (1, 3);
 	# s.runTime(10);
 	# s.cmdTestServer (1, 4);
