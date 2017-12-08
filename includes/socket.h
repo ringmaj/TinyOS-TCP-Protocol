@@ -37,6 +37,7 @@ typedef struct unAckedPackets{
     int index;
     int ack;
     uint32_t timeOut;
+    int bytes;
 }unAckedPackets;
 
 // File descripter id. Each id is associated with a socket_store_t
