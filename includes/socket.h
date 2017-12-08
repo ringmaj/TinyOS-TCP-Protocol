@@ -33,6 +33,11 @@ typedef nx_struct socket_addr_t{
     nx_uint16_t addr;
 }socket_addr_t;
 
+typedef struct unAckedPackets{
+    int index;
+    int ack;
+    uint32_t timeOut;
+}unAckedPackets;
 
 // File descripter id. Each id is associated with a socket_store_t
 typedef uint8_t socket_t;
