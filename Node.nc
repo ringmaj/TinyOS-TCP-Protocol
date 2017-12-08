@@ -76,9 +76,6 @@ implementation{ // each node's private variables must be declared here, (or it w
 	pack sendPackage;
 
 
-
-
-
 	// Holds current nodes understanding of entire network topology
 	//typedef struct routingTable
 	//{
@@ -1082,7 +1079,7 @@ void printSockets(){
 
 	//------------------------------------------------------------------------------------------------------------------------------------------------------
 
-
+//change
 						case 0b01000000:	// ACK Packet
 						  i = call socketHashMap.get(((myMsg->payload[2]) << 24)|((myMsg->payload[1]) << 16)| myMsg->src);
 						  socketTuple = call Transport.getSocketArray(i);
