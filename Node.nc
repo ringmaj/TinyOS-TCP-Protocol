@@ -53,6 +53,7 @@ module Node{
 
 	uses interface CommandHandler;
 	uses interface Queue<uint16_t> as q;
+	uses interface Queue<unAckedPackets> as ackQ;
 	uses interface Pool<uint16_t> as p;
 
 	uses interface Hashmap<uint32_t> as socketHashMap;	// Used to look up "fd" (index of socket in socketArray, to get the socket). Keys are: ((srcPort << 24)|(destPort << 16)|(destAddress)), which is of type uint32_t. Values looked up are "fd" file descriptor, which is of type uint8_t socket_port_t;
@@ -522,7 +523,7 @@ void findTimeOuts(socket_store_t socketTuple){
 
 
 
-		dbg(TRANSPORT_CHANNEL, "AcksReceived:  | %hhu | %hhu | %hhu | %hhu | %hhu |\n", socketTuple.ackReceived[1],socketTuple.ackReceived[2],socketTuple.ackReceived[3],socketTuple.ackReceived[4],socketTuple.ackReceived[5]);
+		dbg(TRANSPORT_CHANNEL, "AcksReceived:  | %hhu | %hhu | %hhu | %hhu | %hhu |\n", socketTuple.ackReceived[0],socketTuple.ackReceived[1],socketTuple.ackReceived[2],socketTuple.ackReceived[3],socketTuple.ackReceived[4]);
 }
 
 void printSockets(){
@@ -633,6 +634,9 @@ void printSockets(){
 		int j;
 		int dataBytesInPack = 9; // how many bytes should be copied into the 9 byte data section of the TCP pack payload
 
+		// holds our packet info for verifying ack received. Holds index #, ack #, and timeout
+		unAckedPackets unverifiedPacket;
+
 		// The lastSent is the index for the last byte in the sendBuff sent.
 		data = &(socketTuple.sendBuff[socketTuple.numberOfBytesSent]);
 
@@ -699,14 +703,19 @@ void printSockets(){
 				dataBytesInPack = 9 * socketTuple.sndWndSize;
 			}
 
+			//unverifiedPacket.index = lastSent;
+			//unverifiedPacket.ack =
+			// add packet to our ackedQueue, to later check
+			call ackQ.enqueue(unverifiedPacket);
 			sendTCP (0b00010000, socketTuple.dest.addr, socketTuple.src, socketTuple.dest.port, socketTuple.seq, socketTuple.ack, data, dataBytesInPack);
 
 			// save the current tuple we are going to use to check for timeouts
 			timeOutCheckTuple = socketTuple;
 
 			 dbg(TRANSPORT_CHANNEL, "BEFORE CLIENT TIMER: %u\n", call clientTimer.getNow());
-			/*call clientTimer.startOneShot(rcvd_ack_time/1000);*/
-			call clientTimer.startOneShot(socketTuple.RTT);
+
+			 // Wait 1 RTT and check if the ack has arrived yet, if not resend the packet
+			  call clientTimer.startOneShot(socketTuple.RTT);
 
 			dbg(TRANSPORT_CHANNEL, "AFTER CLIENT TIMER: %u\n", call clientTimer.getNow());
 
@@ -1097,12 +1106,21 @@ void printSockets(){
 
 								// if get the ack before timeout
 
-								dbg(TRANSPORT_CHANNEL, "received ack at time: %u\n", call clientTimer.getNow());
+								/*dbg(TRANSPORT_CHANNEL, "received ack at time: %u\n", call clientTimer.getNow());
 								dbg (TRANSPORT_CHANNEL, "bytes acked: %hhu\n", socketTuple.numberOfBytesSentAndAcked);
 								dbg (TRANSPORT_CHANNEL, "last sent: %hhu\n", socketTuple.lastSent);
 								dbg(TRANSPORT_CHANNEL,"Last successfully sent seq: %u\n", socketTuple.lastSuccessfulSeq);
 								dbg (TRANSPORT_CHANNEL, "lowestUnackedSentByte: %u\n", socketTuple.lowestUnackedSentByte);
-								dbg (TRANSPORT_CHANNEL, "timeOut[0]: %u\n", socketTuple.timeOut[0]);
+								dbg (TRANSPORT_CHANNEL, "timeOut[0]: %u\n", socketTuple.timeOut[0]);*/
+
+								//dbg(TRANSPORT_CHANNEL, "UNACKED PACKETS [ index: %u, ack: ]:\n")
+
+								/*dbg(TRANSPORT_CHANNEL, "UNACKED PACKETS:\n")
+								for(i = 0; i < socketTuple.transfer; i++)
+								{
+									dbg(TRANSPORT_CHANNEL, "")
+								}*/
+
 
 								if(call clientTimer.getNow() < rcvd_ack_time)
 								{
