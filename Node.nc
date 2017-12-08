@@ -669,6 +669,7 @@ void printSockets(){
 				// reallocate sendBuff
 				j = socketTuple.numberOfBytesSentAndAcked;
 
+
 				for(i = 0; i < SOCKET_BUFFER_SIZE; i++){
 						socketTuple.sendBuff[i] = 0;
 						}
@@ -709,6 +710,8 @@ void printSockets(){
 			//calculate how much data should go in pack (at most 9). But may be less if there aren't 9 bytes left to send, or if the window size isn't that big. amount to put in pack = min (9, windowSize, dataLeftToSend)
 			if ((socketTuple.transfer - socketTuple.lastSent) < dataBytesInPack) {
 				dataBytesInPack = socketTuple.transfer - socketTuple.lastSent;
+
+				dbg("bytes in pack: %u\n", dataBytesInPack);
 
 				for(i = 0; i < 9 - dataBytesInPack + 1; i++)
 				socketTuple.sendBuff[socketTuple.lastSent + dataBytesInPack + i] = 0;
@@ -759,7 +762,18 @@ void printSockets(){
 
 
 			/*sendTCP (0b00010000, socketTuple.dest.addr, socketTuple.src, socketTuple.dest.port, socketTuple.seq, socketTuple.ack, data, dataBytesInPack);*/
+
 			sendTCP (0b00010000, socketTuple.dest.addr, socketTuple.src, socketTuple.dest.port, socketTuple.seq, socketTuple.ack, data, 9);
+
+			/*for(i = 0; i < socketTuple.sndWndSize; i++)
+			{
+				sendTCP (0b00010000, socketTuple.dest.addr, socketTuple.src, socketTuple.dest.port, socketTuple.seq, socketTuple.ack, data, 9);
+				socketTuple.seq += unverifiedPacket.bytes;
+				socketTuple.lastSent += unverifiedPacket.bytes;
+				data = &(socketTuple.sendBuff[socketTuple.lastSent]);
+
+
+			}*/
 
 
 			// save the current tuple we are going to use to check for timeouts
