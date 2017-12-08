@@ -19,7 +19,7 @@ class TestSim:
 	CMD_TEST_CLIENT=4
 	CMD_TEST_SERVER=5
 	CMD_KILL=6
-	CMD_MSG=7          
+	CMD_MSG=7
 	CMD_CLIENT_APP=8    #to set up app client
 	CMD_SERVER_APP=10	#to set up the app server
 
@@ -182,24 +182,25 @@ def main():
 	s.loadTopo("example.topo");
 	s.loadNoise("no_noise.txt");
 	s.bootAll();
-	s.addChannel(s.TRANSPORT_CHANNEL);
+	#s.addChannel(s.TRANSPORT_CHANNEL);
+	s.addChannel(s.CLEAN_OUTPUT);
 	#s.addChannel(s.COMMAND_CHANNEL);
 	#s.addChannel(s.GENERAL_CHANNEL);
 	#s.addChannel(s.NEIGHBOR_CHANNEL);
 	#s.addChannel(s.ROUTING_CHANNEL);
 
 
-	s.runTime(10);
-	s.cmdTestServer (2, 4);
-	s.runTime(10);
+	# s.runTime(10);
+	# s.cmdTestServer (2, 4);
+	# s.runTime(10);
 
 
-	s.cmdSetAppServer(2, 41);	#Set Node 2 as an application server at port 41
-	s.runTime(10);
-	#s.cmdSetAppClient(1, 2, 3, 41);	#Set Node 1 as a n application client, that uses port 3 to use the webapp to connect to server 2 at server port 41
-	s.runTime(10);
-	s.cmdSendText(1, 2, 2, 4, "Hello");
-	s.runTime(10);
+	# s.cmdSetAppServer(2, 41);	#Set Node 2 as an application server at port 41
+	# s.runTime(10);
+	# #s.cmdSetAppClient(1, 2, 3, 41);	#Set Node 1 as a n application client, that uses port 3 to use the webapp to connect to server 2 at server port 41
+	# s.runTime(10);
+	# #s.cmdSendText(1, 2, 2, 4, "Hello");
+	# s.runTime(10);
 
 
 	# s.cmdTestServer (1, 3);
@@ -207,7 +208,21 @@ def main():
 	# s.cmdTestServer (1, 4);
 	# s.runTime(10);
 	#s.cmdTestClient (1, 2, 1, 2);
-	s.cmdTestClient (1, 2, 2, 4, 5);
+	# s.cmdTestClient (1, 2, 2, 4, 5);
+	# s.runTime(10);
+	# #clientclose srcport and destport are backwards
+	# s.cmdClientClose (1, 2, 4, 2);
+	# s.runTime(10);
+
+	s.runTime(10);
+	s.cmdTestServer (2, 4);
+	s.runTime(10);
+	# s.cmdTestServer (1, 3);
+	# s.runTime(10);
+	# s.cmdTestServer (1, 4);
+	# s.runTime(10);
+	#s.cmdTestClient (1, 2, 1, 2);
+	s.cmdTestClient (1, 2, 2, 4, 54);
 	s.runTime(10);
 	#clientclose srcport and destport are backwards
 	s.cmdClientClose (1, 2, 4, 2);
