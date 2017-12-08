@@ -24,6 +24,7 @@ enum socket_state{
 };
 
 
+
 typedef nx_uint8_t nx_socket_port_t;
 typedef uint8_t socket_port_t;
 
@@ -36,8 +37,15 @@ typedef nx_struct socket_addr_t{
 typedef struct unAckedPackets{
     int index;
     int ack;
+    int seq;
+    uint8_t * data;
     uint32_t timeOut;
     int bytes;
+    uint16_t destAddr;
+    socket_port_t srcPort;
+    socket_port_t destPort;
+
+
 }unAckedPackets;
 
 // File descripter id. Each id is associated with a socket_store_t
@@ -57,7 +65,7 @@ typedef struct socket_store_t{
     nx_uint16_t srcAddr;
     socket_port_t src;
     socket_addr_t dest;
-	uint8_t transfer;	// how many bytes should be transferred in total
+	uint16_t transfer;	// how many bytes should be transferred in total
 	uint8_t numberOfBytesSent;	// Number of bytes sent from current node to the other node
 	uint8_t numberOfBytesSentAndAcked;	//Number of bytes that have been sent from current node to the other node THAT HAVE BEEN ACKNOWLEDGED
     uint32_t seq;	// Sequence number = (index in sendBuff of first byte being sent, or about to be sent) + 1 = (number of bytes in other node's receive buffer) + 1
