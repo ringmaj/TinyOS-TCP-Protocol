@@ -639,6 +639,8 @@ void printSockets(){
 		int i;
 		int j;
 		int dataBytesInPack = 9; // how many bytes should be copied into the 9 byte data section of the TCP pack payload
+		int numPacketsToSend; // stores the number of packets to send
+		int tempTimeOut;
 
 		// holds our packet info for verifying ack received. Holds index #, ack #, and timeout
 		unAckedPackets unverifiedPacket;
@@ -659,6 +661,9 @@ void printSockets(){
 			{
 				dbg(TRANSPORT_CHANNEL, "---------------------------------------------------------------------\n");
 				dbg (TRANSPORT_CHANNEL, "Beginning transmisson, sending first packet\n");
+				socketTuple.theirAdvertisedWindow = 128;
+				call Transport.updateSocketArray (socketTuple.fd, &socketTuple);
+
 			}
 			//----------------------------------------------------------------------------------------------------------------------------------------
 
@@ -697,7 +702,7 @@ void printSockets(){
 		 rcvd_ack_time = call clientTimer.getNow() + socketTuple.RTT;
 
 		 // store the time that the ack should arrive before inside of timeOut[]
-		 socketTuple.timeOut[socketTuple.lowestUnackedSentByte] = rcvd_ack_time;
+		 /*socketTuple.timeOut[socketTuple.lowestUnackedSentByte] = rcvd_ack_time;*/
 
 		 dbg(TRANSPORT_CHANNEL, "current time: %u\n", call clientTimer.getNow());
 		 dbg(TRANSPORT_CHANNEL, "timeout: %u\n", rcvd_ack_time);
@@ -739,64 +744,137 @@ void printSockets(){
 
 
 
-			/*int index;
-	    int ack;
-	    int seq;
-	    uint8_t * data;
-	    uint32_t timeOut;
-	    int bytes;
-
-	    uint16_t destAddr;
-	    socket_port_t srcPort;
-	    socket_port_t destPort;*/
-
-
-
 			// add packet to our ackedQueue, to later check
-			call ackQ.enqueue(unverifiedPacket);
+			/*call ackQ.enqueue(unverifiedPacket);*/
 			/*dbg(CLEAN_OUTPUT, "bytes in pack: %u\n", dataBytesInPack);*/
-
 			/*dbg(CLEAN_OUTPUT, "bytes in pack: %u\n", dataBytesInPack);
 			dbg(CLEAN_OUTPUT, "transfer: %u\n", socketTuple.transfer);
 			dbg(CLEAN_OUTPUT, "numberOfBytesSent: %u\n", socketTuple.lastSent);*/
-
 			// make sure all data unused data don't have any garbage values
 
 
+			// if the receiver has enough space to receive our full sending window, then send the packets
+			if(socketTuple.theirAdvertisedWindow >= socketTuple.sndWndSize){
+				numPacketsToSend = socketTuple.sndWndSize/9; // find the number of packets to send
+				tempTimeOut = rcvd_ack_time;
 
 
-			/*sendTCP (0b00010000, socketTuple.dest.addr, socketTuple.src, socketTuple.dest.port, socketTuple.seq, socketTuple.ack, data, dataBytesInPack);*/
+				for(i = 0; i < numPacketsToSend; i++){
 
-			sendTCP (0b00010000, socketTuple.dest.addr, socketTuple.src, socketTuple.dest.port, socketTuple.seq, socketTuple.ack, data, 9);
 
-			/*for(i = 0; i < socketTuple.sndWndSize; i++)
+					// update the unackedPacket to add to our Queue
+					unverifiedPacket.index = socketTuple.lastSent;
+					unverifiedPacket.seq = socketTuple.seq;
+					unverifiedPacket.ack = socketTuple.ack;
+					unverifiedPacket.timeOut = rcvd_ack_time;
+					unverifiedPacket.bytes = dataBytesInPack;
+					unverifiedPacket.data = data;
+					unverifiedPacket.destAddr = socketTuple.dest.addr;
+					unverifiedPacket.srcPort = socketTuple.src;
+					unverifiedPacket.destPort = socketTuple.dest.port;
+					unverifiedPacket.lastSent = socketTuple.lastSent;
+
+					// update the unackedPacket Queue
+					call ackQ.enqueue(unverifiedPacket);
+
+
+					// Wait 1 RTT and check if the ack has arrived yet, if not resend the packet
+					 call clientTimer.startOneShot(socketTuple.RTT);
+
+					// send the packet
+					sendTCP (0b00010000, socketTuple.dest.addr, socketTuple.src, socketTuple.dest.port, socketTuple.seq, socketTuple.ack, data, 9);
+
+					// update the seq and data
+					socketTuple.seq += 9;
+					socketTuple.lastSent +=9;
+					data = &(socketTuple.sendBuff[socketTuple.lastSent]);
+					tempTimeOut += 100;
+
+					dbg(CLEAN_OUTPUT, "SENT %u PACKETS!\n", i+1);
+				}
+
+
+
+		}
+
+		else 	// if the receiver doesn't have enough space to receive our full sending window size, send fewer packets
+
+		{
+
+			if( socketTuple.theirAdvertisedWindow < 9){
+				// Wait 1 RTT and check if the ack has arrived yet, if not resend the packet
+				 call clientTimer.startOneShot(socketTuple.RTT);
+
+
+				sendTCP (0b00010000, socketTuple.dest.addr, socketTuple.src, socketTuple.dest.port, socketTuple.seq, socketTuple.ack, data, dataBytesInPack);
+				// update the unackedPacket Queue
+				call ackQ.enqueue(unverifiedPacket);
+			}
+			else
 			{
+				// update the number of packets to send
+				numPacketsToSend = socketTuple.theirAdvertisedWindow/9;
+
+
+			for(i = 0; i < numPacketsToSend; i++){
+
+				// update the unackedPacket to add to our Queue
+				unverifiedPacket.index = socketTuple.lastSent;
+				unverifiedPacket.seq = socketTuple.seq;
+				unverifiedPacket.ack = socketTuple.ack;
+				unverifiedPacket.timeOut = tempTimeOut;
+				unverifiedPacket.bytes = dataBytesInPack;
+				unverifiedPacket.data = data;
+				unverifiedPacket.destAddr = socketTuple.dest.addr;
+				unverifiedPacket.srcPort = socketTuple.src;
+				unverifiedPacket.destPort = socketTuple.dest.port;
+				unverifiedPacket.lastSent = socketTuple.lastSent;
+
+				// update the unackedPacket Queue
+				call ackQ.enqueue(unverifiedPacket);
+
+
+				// Wait 1 RTT and check if the ack has arrived yet, if not resend the packet
+				 call clientTimer.startOneShot(socketTuple.RTT);
+
+				// send the packet
 				sendTCP (0b00010000, socketTuple.dest.addr, socketTuple.src, socketTuple.dest.port, socketTuple.seq, socketTuple.ack, data, 9);
-				socketTuple.seq += unverifiedPacket.bytes;
-				socketTuple.lastSent += unverifiedPacket.bytes;
+
+				// update the seq and data
+				socketTuple.seq += 9;
+				socketTuple.lastSent +=9;
 				data = &(socketTuple.sendBuff[socketTuple.lastSent]);
+				tempTimeOut += 100;
+				dbg(CLEAN_OUTPUT, "SENT %u PACKETS!\n", numPacketsToSend);
+			}
+
+			}
 
 
-			}*/
+
+		}
+
+			/*sendTCP (0b00010000, socketTuple.dest.addr, socketTuple.src, socketTuple.dest.port, socketTuple.seq, socketTuple.ack, data, 9);*/
+
 
 
 			// save the current tuple we are going to use to check for timeouts
-			timeOutCheckTuple = socketTuple;
+			//timeOutCheckTuple = socketTuple;
 
 
 
 
 				// saves the currently sent packet into a unAckedPackets struct, inside of our unackedQueue
-				timeoutPacketCheck.index = socketTuple.lastSent;
+				/*timeoutPacketCheck.index = socketTuple.lastSent;
 				timeoutPacketCheck.ack = socketTuple.seq;
 				timeoutPacketCheck.timeOut = rcvd_ack_time;
-				timeoutPacketCheck.bytes = dataBytesInPack;
+				timeoutPacketCheck.bytes = dataBytesInPack;*/
 
-				// Wait 1 RTT and check if the ack has arrived yet, if not resend the packet
-				 call clientTimer.startOneShot(socketTuple.RTT);
+				/*// Wait 1 RTT and check if the ack has arrived yet, if not resend the packet
+				 call clientTimer.startOneShot(socketTuple.RTT);*/
 
 			// increase lowestUnackedSentByte by 1 and send in order to get the timeout for the next packet
-			socketTuple.lowestUnackedSentByte++;
+			//socketTuple.lowestUnackedSentByte++;
 			call Transport.updateSocketArray (socketTuple.fd, &socketTuple);
 
 		}
@@ -898,27 +976,31 @@ void printSockets(){
 
 // no longer needed
 	event void clientTimer.fired () {	// handle timeout. Client has sent a packet, but not been acked yet. So we assume it hasn't arrived at the recipient, and needs to be re-sent
-
 	// get the first element in the unackedQueue
 	unAckedPackets resentPacket;
+
+	socket_store_t socketTuple;
+	int i;
+
 	resentPacket =  (call ackQ.element(0));
+
+	i = call socketHashMap.get(((resentPacket.srcPort) << 24)|((resentPacket.destPort) << 16)| resentPacket.destAddr);
+	socketTuple = call Transport.getSocketArray(i);
+
+
 
 	// if our unackedQueue still has the same starting element, then that means we have reached a timeout, resend the packet from the ackQueue
 	if(call clientTimer.getNow() >= (call ackQ.element(0)).timeOut)
 	{
-		//dbg (CLEAN_OUTPUT, "LATE! RESENDING\n");
-		sendTCP (0b00010000, resentPacket.destAddr, resentPacket.srcPort, resentPacket.destPort, resentPacket.seq, resentPacket.ack, resentPacket.data, resentPacket.bytes);
+		dbg (CLEAN_OUTPUT, "LATE! RESENDING\n");
+		socketTuple.lastSent = resentPacket.lastSent;
+		socketTuple.seq = resentPacket.seq;
+		socketTuple.ack = resentPacket.ack;
+		call Transport.updateSocketArray(i,&socketTuple);
 
-		//sendTCP (0b00010000, socketTuple.dest.addr, socketTuple.src, socketTuple.dest.port, socketTuple.seq, socketTuple.ack, data, 9);
+		continueTCPStream(socketTuple);
 	}
-	//change
-		// Before the timeout, check if the ack has already arrived, automatically updates ackReceived
 
-
-		/*findTimeOuts(timeOutCheckTuple);
-
-
-		dbg(TRANSPORT_CHANNEL, "ACK Check!\n");*/
 	}
 
 	event void lastFinTimer.fired () {
@@ -1450,10 +1532,10 @@ void printSockets(){
 							{
 
 								// received the correct ACK! Now update the ack to (ACK + 1) since we're now expecting the next packets
-								
+
 								socketTuple.numBytesRcvd += 9;
 								socketTuple.ack += 9;
-								
+
 								call Transport.updateSocketArray(fd, &socketTuple);
 
 
