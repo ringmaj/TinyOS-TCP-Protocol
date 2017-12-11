@@ -653,6 +653,14 @@ void printSockets(){
 		dbg(TRANSPORT_CHANNEL, "Number of Bytes Sent and Acked: %hhu\n", socketTuple.numberOfBytesSentAndAcked);
 		dbg(TRANSPORT_CHANNEL, "Transfer: %hu\n", socketTuple.transfer);
 
+		// if we already have sent the same number of bytes as our transfer, we may have already finished sending. Just wait for the acks to be sent or timeout and resend the packets
+		if(socketTuple.numberOfBytesSent >= socketTuple.transfer)
+		{
+			//dbg(CLEAN_OUTPUT, "We've already sent %hhu bytes! Wait for the acks or resend later\n");
+			return;
+
+		}
+
 
 		// if there is still data to send, we haven't reached the end of our sendBuffer
 		if(socketTuple.numberOfBytesSentAndAcked < socketTuple.transfer){
@@ -736,6 +744,7 @@ void printSockets(){
 
 			// update the unackedPacket Queue
 			unverifiedPacket.index = socketTuple.lastSent;
+			unverifiedPacket.lastSent = socketTuple.lastSent;
 			unverifiedPacket.seq = socketTuple.seq;
 			unverifiedPacket.ack = socketTuple.ack;
 			unverifiedPacket.timeOut = rcvd_ack_time;
@@ -778,6 +787,7 @@ void printSockets(){
 
 					// update the unackedPacket to add to our Queue
 					unverifiedPacket.index = socketTuple.lastSent;
+					unverifiedPacket.lastSent = socketTuple.lastSent;
 					unverifiedPacket.seq = socketTuple.seq;
 					unverifiedPacket.ack = socketTuple.ack;
 					unverifiedPacket.timeOut = tempTimeOut;
@@ -804,10 +814,10 @@ void printSockets(){
 					data = &(socketTuple.sendBuff[socketTuple.lastSent]);
 					//dbg(CLEAN_OUTPUT, "tempTimer: %u\n", tempTimeOut);
 					//dbg(CLEAN_OUTPUT, "tempTimer\n");
-					/*tempTimeOut += 100;*/
+					tempTimeOut += 100;
 
-					dbg(CLEAN_OUTPUT, "SENT %u PACKETS!\n", i+1);
-					dbg (TRANSPORT_CHANNEL, "Node %hu sends | (ACK, seq=%u, ack=%u)\n", TOS_NODE_ID, socketTuple.seq, socketTuple.ack);
+					//dbg(CLEAN_OUTPUT, "SENT %u PACKETS!\n", i+1);
+					dbg (TRANSPORT_CHANNEL, "Node %hu sends | (DATA, seq=%u, ack=%u)\n", TOS_NODE_ID, socketTuple.seq, socketTuple.ack);
 
 				}
 
@@ -831,8 +841,8 @@ void printSockets(){
 				socketTuple.numberOfBytesSent += dataBytesInPack;
 				// update the unackedPacket Queue
 				call ackQ.enqueue(unverifiedPacket);
-				dbg(CLEAN_OUTPUT, "SENT %u PACKETS!\n", 1);
-				dbg (TRANSPORT_CHANNEL, "Node %hu sends | (ACK, seq=%u, ack=%u)\n", TOS_NODE_ID, socketTuple.seq, socketTuple.ack);
+				//dbg(CLEAN_OUTPUT, "SENT %u PACKETS!\n", 1);
+				dbg (TRANSPORT_CHANNEL, "Node %hu sends | (DATA, seq=%u, ack=%u)\n", TOS_NODE_ID, socketTuple.seq, socketTuple.ack);
 
 			}
 			else
@@ -852,6 +862,7 @@ void printSockets(){
 
 				// update the unackedPacket to add to our Queue
 				unverifiedPacket.index = socketTuple.lastSent;
+				unverifiedPacket.lastSent = socketTuple.lastSent;
 				unverifiedPacket.seq = socketTuple.seq;
 				unverifiedPacket.ack = socketTuple.ack;
 				unverifiedPacket.timeOut = tempTimeOut;
@@ -879,9 +890,9 @@ void printSockets(){
 				data = &(socketTuple.sendBuff[socketTuple.lastSent]);
 				//dbg(CLEAN_OUTPUT, "tempTimer: %u\n", tempTimeOut);
 				//dbg(CLEAN_OUTPUT, "tempTimer\n");
-				/*tempTimeOut += 100;*/
-				dbg(CLEAN_OUTPUT, "SENT %u PACKETS!\n", i+1);
-				dbg (TRANSPORT_CHANNEL, "Node %hu sends | (ACK, seq=%u, ack=%u)\n", TOS_NODE_ID, socketTuple.seq, socketTuple.ack);
+				tempTimeOut += 100;
+				//dbg(CLEAN_OUTPUT, "SENT %u PACKETS!\n", i+1);
+				dbg (TRANSPORT_CHANNEL, "Node %hu sends | (DATA, seq=%u, ack=%u)\n", TOS_NODE_ID, socketTuple.seq, socketTuple.ack);
 
 			}
 
@@ -1009,7 +1020,7 @@ void printSockets(){
 	// if our unackedQueue still has the same starting element, then that means we have reached a timeout, resend the packet from the ackQueue
 	if(call clientTimer.getNow() >= (call ackQ.element(0)).timeOut)
 	{
-		dbg (CLEAN_OUTPUT, "LATE! RESENDING\n");
+		//dbg (CLEAN_OUTPUT, "LATE! RESENDING\n");
 		socketTuple.lastSent = resentPacket.lastSent;
 		socketTuple.seq = resentPacket.seq;
 		socketTuple.ack = resentPacket.ack;
