@@ -218,18 +218,12 @@ def main():
 	# s.cmdClientClose (1, 2, 4, 2);
 	# s.runTime(10);
 
+	username = "acerpa\0\0\0"
+	s.cmdSetAppServer(2, 41);	#Set Node 2 as an application server at port 41
 	s.runTime(10);
-	s.cmdTestServer (2, 4);
+	s.cmdSetAppClient(1, 2, 3, 41, username);	#Set Node 1 as a n application client, that uses port 3 to use the webapp to connect to server 2 at server port 41
 	s.runTime(10);
-	# s.cmdTestServer (1, 3);
-	# s.runTime(10);
-	# s.cmdTestServer (1, 4);
-	# s.runTime(10);
-	#s.cmdTestClient (1, 2, 1, 2);
-	s.cmdTestClient (1, 2, 2, 4, 122);
-	s.runTime(10);
-	#clientclose srcport and destport are backwards
-	#s.cmdClientClose (1, 2, 4, 2);
+	s.cmdSendText(1, 2, 2, 4, "Hello");
 	s.runTime(10);
 
 

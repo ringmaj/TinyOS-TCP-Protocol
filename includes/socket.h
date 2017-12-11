@@ -83,7 +83,7 @@ typedef struct socket_store_t{
     int lowestUnackedSentByte;
     int lastSuccessfulSeq; // records the last seq that was successfully sent and received an ack
 
-    char userName[10];
+    char userName[9];
 
 
     // This is the receiver portion
@@ -99,5 +99,10 @@ typedef struct socket_store_t{
 	// AdvertisedWindow = MaxRcvBuffer - ((NextByteExpected - 1) - LastByteRead )
 	// All the buffer space minus the buffer space that’s in use
 }socket_store_t;
+
+typedef struct user {
+	char name[9];
+	socket_store_t * userPtr;
+}user;
 
 #endif

@@ -59,6 +59,9 @@ implementation {
 
     components new QueueC(unAckedPackets, 150) as ackedQueue;
     Node.ackQ -> ackedQueue;
+	
+	components new QueueC(user, 150) as appUserQueue;
+    Node.appUserList -> appUserQueue;
 
     components new HashmapC(uint32_t, 150);
   	Node.socketHashMap -> HashmapC;

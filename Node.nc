@@ -54,6 +54,7 @@ module Node{
 	uses interface CommandHandler;
 	uses interface Queue<uint16_t> as q;
 	uses interface Queue<unAckedPackets> as ackQ;
+	uses interface Queue<user>           as appUserList;
 	uses interface Pool<uint16_t> as p;
 
 	uses interface Hashmap<uint32_t> as socketHashMap;	// Used to look up "fd" (index of socket in socketArray, to get the socket). Keys are: ((srcPort << 24)|(destPort << 16)|(destAddress)), which is of type uint32_t. Values looked up are "fd" file descriptor, which is of type uint8_t socket_port_t;
@@ -81,46 +82,44 @@ implementation{ // each node's private variables must be declared here, (or it w
 
 
 	// Holds current nodes understanding of entire network topology
-	//typedef struct routingTable
-	//{
-		uint8_t routingTableNeighborArray[PACKET_MAX_PAYLOAD_SIZE * 8][PACKET_MAX_PAYLOAD_SIZE * 8];
-		uint16_t routingTableNumNodes;
-	//} routing;
+	
+	uint8_t routingTableNeighborArray[PACKET_MAX_PAYLOAD_SIZE * 8][PACKET_MAX_PAYLOAD_SIZE * 8];
+	uint16_t routingTableNumNodes;
+	
 
 
-	//typedef struct forwardingTable
-	//{
-		uint16_t forwardingTableTo[50];
-		uint16_t forwardingTableNext[50];
-		uint16_t pathCost[50];
+	
+	uint16_t forwardingTableTo[50];
+	uint16_t forwardingTableNext[50];
+	uint16_t pathCost[50];
 
-		// max index number for both arrays
-		// to[0] | next[0]
-		// to[1] | next[1]
+	// max index number for both arrays
+	// to[0] | next[0]
+	// to[1] | next[1]
 
-		uint16_t forwardingTableNumNodes;
+	uint16_t forwardingTableNumNodes;
 
 
-		// Project 3
-		// Holds all of the ports that were already initialized by cmdTestServer
-		socket_port_t initializedPorts[100];
-		// Holds the index for the last port in initializedPorts array
-		uint16_t topPort = 0;
-		//uint16_t rtt_calc;
-		//uint16_t startTime;
-		//uint16_t endTime;
+	// Project 3
+	// Holds all of the ports that were already initialized by cmdTestServer
+	socket_port_t initializedPorts[100];
+	// Holds the index for the last port in initializedPorts array
+	uint16_t topPort = 0;
+	//uint16_t rtt_calc;
+	//uint16_t startTime;
+	//uint16_t endTime;
 
-		uint16_t nodeDest;
-		uint8_t nodeSrcPort;
-		uint8_t nodeDestPort;
+	uint16_t nodeDest;
+	uint8_t nodeSrcPort;
+	uint8_t nodeDestPort;
 
-		uint32_t rcvd_ack_time;	// Timeout, if you haven't received an ack by this time, then the packet is lost, resend. How long the sender should wait for an ACK, before re-sending
-		socket_store_t timeOutCheckTuple; // used to check for timeouts
+	uint32_t rcvd_ack_time;	// Timeout, if you haven't received an ack by this time, then the packet is lost, resend. How long the sender should wait for an ACK, before re-sending
+	socket_store_t timeOutCheckTuple; // used to check for timeouts
+	socket_store_t * appServer;
+	unAckedPackets timeoutPacketCheck;
 
-		unAckedPackets timeoutPacketCheck;
-
-		// Project 4
-		char name [10] = "myNodeName";
+	// Project 4
+	char name [10] = "myNodeName";
 
 
 	// Used in neighbor discovery
@@ -2093,8 +2092,8 @@ void printSockets(){
 
 	 	}
 
-	 	event void CommandHandler.setAppClient(uint16_t destination, uint8_t srcPort, uint8_t destPort){
-	 		dbg (CLEAN_OUTPUT, "Called setAppClient! destination: %hu, srcPort: %hhu, destPort: %hhu\n", destination, srcPort, destPort);
+	 	event void CommandHandler.setAppClient(uint16_t destination, uint8_t srcPort, uint8_t destPort, uint8_t * username){
+	 		dbg (CLEAN_OUTPUT, "Called setAppClient! destination: %hu, srcPort: %hhu, destPort: %hhu, username: %s\n", destination, srcPort, destPort, (char *) username);
 
 
 	 	}
