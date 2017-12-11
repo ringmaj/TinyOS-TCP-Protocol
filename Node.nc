@@ -119,6 +119,9 @@ implementation{ // each node's private variables must be declared here, (or it w
 
 		unAckedPackets timeoutPacketCheck;
 
+		// Project 4
+		char name [10] = "myNodeName";
+
 
 	// Used in neighbor discovery
 	uint16_t neighbors [50];
@@ -902,7 +905,7 @@ void printSockets(){
 	// if our unackedQueue still has the same starting element, then that means we have reached a timeout, resend the packet from the ackQueue
 	if(call clientTimer.getNow() >= (call ackQ.element(0)).timeOut)
 	{
-		dbg (CLEAN_OUTPUT, "LATE! RESENDING\n");
+		//dbg (CLEAN_OUTPUT, "LATE! RESENDING\n");
 		sendTCP (0b00010000, resentPacket.destAddr, resentPacket.srcPort, resentPacket.destPort, resentPacket.seq, resentPacket.ack, resentPacket.data, resentPacket.bytes);
 
 		//sendTCP (0b00010000, socketTuple.dest.addr, socketTuple.src, socketTuple.dest.port, socketTuple.seq, socketTuple.ack, data, 9);
@@ -1844,15 +1847,69 @@ void printSockets(){
 		event void CommandHandler.setAppServer(uint8_t port){
 	 		//call setTestServer(port);
 	 		// do other stuff with application???
-	 		dbg (CLEAN_OUTPUT, "Called setAppServer! port is: %hhu\n", port);
+
+
+			//-----------------------------------------------------------
+
+			int i;
+			socket_addr_t ad;
+			socket_addr_t * addr;
+			socket_t fd;
+			socket_store_t socketTuple;
+
+			dbg (CLEAN_OUTPUT, "Called setAppServer! port is: %hhu\n", port);
+
+
+			// change port to one from cmd
+			ad.port = port;
+			ad.addr = TOS_NODE_ID;
+
+			addr = &ad;
+
+			fd	= call Transport.socket();
+			call Transport.bind(fd, addr);
+
+			// function to check if client tries connections
+			// accept()
+
+			// add port to initialized ports array
+			initializedPorts[topPort] = port;
+			topPort++;
+
+			socketTuple = call Transport.getSocketArray(fd);
+			socketTuple.state = LISTEN;
+			call Transport.updateSocketArray(fd, &socketTuple);
+
+
+			/*dbg(COMMAND_CHANNEL, "Port: %hhu\n", port);
+
+			dbg(COMMAND_CHANNEL, "Number of accepted ports: %hhu\n", topPort);
+			dbg(COMMAND_CHANNEL, "port 0: %hhu\n", initializedPorts[0]);
+			dbg(COMMAND_CHANNEL, "port 1: %hhu\n", initializedPorts[1]);
+			dbg(COMMAND_CHANNEL, "port 2: %hhu\n", initializedPorts[2]);*/
+
+
+			dbg(COMMAND_CHANNEL, "\n");
+
+
+
+			// timer to attempt connections
+			call serverTimer.startPeriodic(2000);
+
 	 	}
 
 	 	event void CommandHandler.setAppClient(uint16_t destination, uint8_t srcPort, uint8_t destPort){
 	 		dbg (CLEAN_OUTPUT, "Called setAppClient! destination: %hu, srcPort: %hhu, destPort: %hhu\n", destination, srcPort, destPort);
+
+
 	 	}
 
 	 	event void CommandHandler.appClientSend(uint16_t destination, uint8_t srcPort, uint8_t destPort, uint8_t * message){
 	 		dbg (CLEAN_OUTPUT, "Called appClientSend! Message is: %s\n", (char *)message);
+
+
+
+
 	 	}
 
 	void makePack(pack *Package, uint16_t src, uint16_t dest, uint16_t TTL, uint16_t protocol, uint16_t seq, uint8_t* payload, uint8_t length){
