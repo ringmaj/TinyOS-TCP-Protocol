@@ -168,8 +168,8 @@ class TestSim:
 		#print("{0}".format(chr(port)));
 		self.sendCMD (self.CMD_SERVER_APP, source, "{0}".format(chr(port)));
 
-	def cmdSetAppClient(self, source, destination, srcPort, destPort):
-		self.sendCMD(self.CMD_CLIENT_APP, source, "{0}{1}{2}".format(chr(destination), chr(srcPort), chr(destPort)));
+	def cmdSetAppClient(self, source, destination, srcPort, destPort, username):
+		self.sendCMD(self.CMD_CLIENT_APP, source, "{0}{1}{2}{3}".format(chr(destination), chr(srcPort), chr(destPort), username));
 		#print("{0}{1}{2}".format(chr(destination), chr(srcPort), chr(destPort)));
 		#self.sendCMD(self.CMD_CLIENT_APP, source, "{0}{1}{2}".format(chr(destination), chr(srcPort), chr(destPort)));
 
@@ -185,8 +185,8 @@ def main():
 	s.loadTopo("example.topo");
 	s.loadNoise("no_noise.txt");
 	s.bootAll();
-	#s.addChannel(s.TRANSPORT_CHANNEL);
-	#s.addChannel(s.CLEAN_OUTPUT);
+	s.addChannel(s.TRANSPORT_CHANNEL);
+	s.addChannel(s.CLEAN_OUTPUT);
 	s.addChannel(s.FINAL_OUTPUT);
 	#s.addChannel(s.COMMAND_CHANNEL);
 	#s.addChannel(s.GENERAL_CHANNEL);
@@ -216,9 +216,10 @@ def main():
 	# s.runTime(10);
 	# #clientclose srcport and destport are backwards
 	# s.cmdClientClose (1, 2, 4, 2);
-	# s.runTime(10);
+	s.runTime(30);
 
 	username = "acerpa\0\0\0"
+	s.runTime(10);
 	s.cmdSetAppServer(2, 41);	#Set Node 2 as an application server at port 41
 	s.runTime(10);
 	s.cmdSetAppClient(1, 2, 3, 41, username);	#Set Node 1 as a n application client, that uses port 3 to use the webapp to connect to server 2 at server port 41

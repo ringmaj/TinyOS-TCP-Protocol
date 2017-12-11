@@ -120,7 +120,7 @@ implementation{ // each node's private variables must be declared here, (or it w
 
 	// Project 4
 	char name [10] = "myNodeName";
-
+	uint8_t appServerPortNum;
 
 	// Used in neighbor discovery
 	uint16_t neighbors [50];
@@ -320,7 +320,20 @@ implementation{ // each node's private variables must be declared here, (or it w
 
 	}
 
-
+	void AppServerForwardMessage(socket_store_t socketTuple) {
+		int i;
+		socket_t fd;
+		uint8_t appPayload [9];
+		*((uint16_t*)(appPayload)) = socketTuple.dest.addr;
+		
+		memcpy(appPayload + 2, socketTuple.rcvdBuff + socketTuple.indLastByteReadFromRCVD + 1, 9);
+		socketTuple.indLastByteReadFromRCVD += 9;
+		// runs once for each App client
+		for (i = 0; i < call appUserList.size(); i++) {
+			//memcpy(userSendBuff, appPayload, 9);
+			//appUserList.element(i).userPtr->sendBuff;
+		}
+	}
 
 	void printNeighbors (char channel []) {
 		int i;
@@ -987,7 +1000,7 @@ void printSockets(){
 		z = 65;
 		//socket_store_t socketTuple;
 
-
+		appServerPortNum = 255;
 		totalNumNodes++;
 		dbg(GENERAL_CHANNEL, "NUM NODES: %d\n", totalNumNodes);
 
@@ -1149,6 +1162,7 @@ void printSockets(){
 		uint8_t temp;
 		uint32_t key;
 		uint16_t copySrc;
+		user appUsr;
 
 		//bool found;
 		//dbg(GENERAL_CHANNEL, "\nPacket Received: ");
@@ -1274,6 +1288,7 @@ void printSockets(){
 											socketTuple.dest.addr = myMsg->src;
 											socketTuple.dest.port = myMsg->payload[1];
 											socketTuple.numBytesRcvd = 0;
+											socketTuple.indLastByteReadFromRCVD = 0;
 											socketTuple.sndWndSize = 27;	// 27 bytes (3 packets) can be sent without receiving an ACK
 											dbg(COMMAND_CHANNEL, "Found empty socket! Socket #: %hhu\n", socketTuple.fd);
 											socketTuple.state = SYN_RCVD;
@@ -1282,7 +1297,7 @@ void printSockets(){
 											// Store the fd in a hashmap so it can be easily accessed later
 											dbg (COMMAND_CHANNEL, "Storing file descriptor %hhu in hashmap by srcPort %hhu, destPort%hhu, and destAddress %hhu\n", socketTuple.fd, myMsg->payload[1], myMsg->payload[2], myMsg->src);
 											call socketHashMap.insert ((myMsg->payload[1] << 24)|(myMsg->payload[2] << 16)|(myMsg->src), socketTuple.fd);
-
+											
 											printSockets();
 
 
@@ -1635,9 +1650,10 @@ void printSockets(){
 
 								// received the correct ACK! Now update the ack to (ACK + 1) since we're now expecting the next packets
 
-								socketTuple.numBytesRcvd += 9;
+								
 								socketTuple.ack += 9;
 
+								
 								call Transport.updateSocketArray(fd, &socketTuple);
 
 
@@ -1648,6 +1664,28 @@ void printSockets(){
 								temp = SOCKET_BUFFER_SIZE - ((socketTuple.ack - 1) - socketTuple.indLastByteReadFromRCVD);
 								dbg (TRANSPORT_CHANNEL, "Sending ack to Node %hu AdvertisedWindow: %hhu |  (Data: %hhu %hhu %hhu %hhu %hhu %hhu %hhu %hhu %hhu, seq=%u, ack=%u)\n", myMsg->src, temp, myMsg->payload[11], myMsg->payload[12], myMsg->payload[13], myMsg->payload[14], myMsg->payload[15], myMsg->payload[16], myMsg->payload[17], myMsg->payload[18], myMsg->payload[19], socketTuple.seq, socketTuple.ack);
 								sendTCP (0b01000000, socketTuple.dest.addr, socketTuple.src, socketTuple.dest.port, socketTuple.seq, socketTuple.ack, &temp, sizeof(temp));
+								
+								
+								
+								//If the data pack is for an App, then handle the app here:
+								if (myMsg->payload[2] == appServerPortNum) {
+									// the pack is for an app connection (because the port number matches the app port number)
+									dbg (TRANSPORT_CHANNEL, "Received an App data pack\n");
+									// check if it's the first data packet of this connection
+									if (socketTuple.numBytesRcvd < 9) {
+										dbg (TRANSPORT_CHANNEL, "First AppDataPack from this user: user to queue\n");
+										memcpy(appUsr.name, myMsg->payload + 11, 9);
+										call appUserList.enqueue(appUsr);
+									}
+									
+									
+									// if the data is finished being sent, then forward the data to all the other app nodes
+									//if (socketTuple.numBytesRcvd >= socketTuple.transfer) {
+										AppServerForwardMessage(socketTuple);
+									//}
+									
+								}
+								socketTuple.numBytesRcvd += 9;
 							}
 
 
@@ -1931,6 +1969,7 @@ void printSockets(){
 		socketTuple.isSender = TRUE;
 		socketTuple.transfer = transfer;
 		socketTuple.numberOfBytesSent = 0;
+		socketTuple.indLastByteReadFromRCVD = 0;
 		socketTuple.numberOfBytesSentAndAcked  = 0;
 		socketTuple.lastSent = 0;	// 0 bytes have been sent so far
 		socketTuple.sndWndSize = 27;	// 27 bytes (3 packets) can be sent without receiving an ACK
@@ -2043,16 +2082,12 @@ void printSockets(){
 	 		// do other stuff with application???
 
 
-			//-----------------------------------------------------------
-
+			//------------------------------Most of this is a modified copy of SetTestServer-----------------------------
 			int i;
 			socket_addr_t ad;
 			socket_addr_t * addr;
 			socket_t fd;
 			socket_store_t socketTuple;
-
-			dbg (CLEAN_OUTPUT, "Called setAppServer! port is: %hhu\n", port);
-
 
 			// change port to one from cmd
 			ad.port = port;
@@ -2089,13 +2124,101 @@ void printSockets(){
 
 			// timer to attempt connections
 			call serverTimer.startPeriodic(2000);
-
+			
+			//------------------------------Copy of SetTestServer finished-----------------------------
+			
+			appServerPortNum = port;	// receive.receive will check if a packet's port is set to appServerPortNum
 	 	}
 
 	 	event void CommandHandler.setAppClient(uint16_t destination, uint8_t srcPort, uint8_t destPort, uint8_t * username){
-	 		dbg (CLEAN_OUTPUT, "Called setAppClient! destination: %hu, srcPort: %hhu, destPort: %hhu, username: %s\n", destination, srcPort, destPort, (char *) username);
+			int transfer = SOCKET_BUFFER_SIZE;
+			
+			//------------------------------Most of this is a modified copy of SetTestClient-----------------------------
+			int i;
+			socket_addr_t ad;
+			socket_addr_t * addr;
+			socket_addr_t serverAddress;
+			socket_t fd;
+			socket_store_t socketTuple;
+			uint32_t seq;
+			uint32_t ack;
+			char message [] = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ";
+			/*nodeDest = destination;
+			nodeSrcPort = srcPort;
+			nodeDestPort = destPort;*/
+
+			dbg (COMMAND_CHANNEL, "Destination: %hhu, srcPort: %hhu, destPort: %hhu, transfer: %hu\n", destination, srcPort, destPort, transfer);
 
 
+			ad.port = srcPort;
+			ad.addr = TOS_NODE_ID;
+
+			addr = &ad;
+
+			fd	= call Transport.socket();
+			call Transport.bind(fd, addr);
+
+			serverAddress.port = destPort;
+			serverAddress.addr = destination;
+
+			addr = &serverAddress;
+			socketTuple = call Transport.getSocketArray(fd);
+			socketTuple.srcAddr = TOS_NODE_ID;
+			socketTuple.src = srcPort;
+			socketTuple.dest.addr = destination;
+			socketTuple.dest.port = destPort;
+			socketTuple.isSender = TRUE;
+			socketTuple.transfer = 9;
+			socketTuple.numberOfBytesSent = 0;
+			socketTuple.indLastByteReadFromRCVD = 0;
+			socketTuple.numberOfBytesSentAndAcked  = 0;
+			socketTuple.lastSent = 0;	// 0 bytes have been sent so far
+			socketTuple.sndWndSize = 27;	// 27 bytes (3 packets) can be sent without receiving an ACK
+			socketTuple.numBytesRcvd = 0;
+
+
+			// allocate the buffer
+			/*memcpy(&(socketTuple.sendBuff), message, transfer);
+			socketTuple.sendBuff[transfer - 1] = '\0';*/
+			for(i = 0; i < SOCKET_BUFFER_SIZE; i++){
+				socketTuple.ackReceived[i] = 0;
+			}
+
+			memcpy (socketTuple.sendBuff, username, 9);
+
+
+
+			call Transport.updateSocketArray(fd, &socketTuple);
+
+			// add port to initialized ports array
+			initializedPorts[topPort] = srcPort;
+			topPort++;
+
+
+
+			// create random sequence number to start
+			//seq = call Random.rand32();
+			// set seq as 0 for now so debugging the seq's and ack's is easier
+			seq = 0;
+
+			// setup timer for calculating the RTT
+			socketTuple.RTT = call clientTimer.getNow();
+
+			dbg (COMMAND_CHANNEL, "Start time is: %u\n", socketTuple.RTT );
+
+			// update socket State
+			socketTuple.state = SYN_SENT;
+			socketTuple.seq = 0;
+			socketTuple.ack = 0;
+			call Transport.updateSocketArray(fd, &socketTuple);
+
+			printSockets();
+			sendTCP (0b10000000, destination, srcPort, destPort, seq, 0, (uint16_t *)(&transfer), sizeof (transfer));	// SYN
+
+			// add ((srcPort << 24)|(destPort << 16)|(destAddress)) to hashtable to look up file descriptor "fd" faster next time. "fd" will be used to look up the port in socketArray
+			call socketHashMap.insert ((srcPort << 24)|(destPort << 16)|(destination), fd);
+			//------------------------------Copy of SetTestClient finished-----------------------------
+			dbg (CLEAN_OUTPUT, "Called setAppClient! destination: %hu, srcPort: %hhu, destPort: %hhu, username: %s\n", destination, srcPort, destPort, (char *) username);
 	 	}
 
 	 	event void CommandHandler.appClientSend(uint16_t destination, uint8_t srcPort, uint8_t destPort, uint8_t * message){

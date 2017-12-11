@@ -102,6 +102,7 @@ typedef struct socket_store_t{
 
 typedef struct user {
 	char name[9];
+	socket_t fd;
 	socket_store_t * userPtr;
 }user;
 
