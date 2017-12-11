@@ -708,7 +708,7 @@ void printSockets(){
 
 
 		 // record time that ack should arrive before
-		 rcvd_ack_time = call clientTimer.getNow() + 2*socketTuple.RTT;
+		 rcvd_ack_time = call clientTimer.getNow() + socketTuple.RTT;
 		 numOutstandingPackets = (socketTuple.numberOfBytesSent - socketTuple.numberOfBytesSentAndAcked)/9;
 
 
@@ -765,7 +765,7 @@ void printSockets(){
 
 				dbg (TRANSPORT_CHANNEL, "(numberOfBytesSent(%hhu) - numberOfBytesSentAndAcked(%hhu))/9 = %hhu\n", socketTuple.numberOfBytesSent, socketTuple.numberOfBytesSentAndAcked, numOutstandingPackets );
 
-
+				dbg(CLEAN_OUTPUT, "numOutstandingPackets %d\n", numOutstandingPackets);
 				numPacketsToSend -= numOutstandingPackets;
 				if(numPacketsToSend <= 0)
 					numPacketsToSend = 0;
@@ -814,7 +814,7 @@ void printSockets(){
 					//dbg(CLEAN_OUTPUT, "tempTimer\n");
 					tempTimeOut += 1000;
 
-					//dbg(CLEAN_OUTPUT, "SENT %u PACKETS!\n", i+1);
+					dbg(CLEAN_OUTPUT, "SENT %u PACKETS!\n", i+1);
 					dbg (TRANSPORT_CHANNEL, "Node %hu sends | (DATA, seq=%u, ack=%u)\n", TOS_NODE_ID, socketTuple.seq, socketTuple.ack);
 
 				}
@@ -859,8 +859,8 @@ void printSockets(){
 
 				// Wait 1 RTT and check if the ack has arrived yet, if not resend the packet
 				 call clientTimer.startOneShot(tempTimeOut);
-				 dbg(CLEAN_OUTPUT, "SENT %u PACKETS!\n", 1);
-				 dbg(CLEAN_OUTPUT, "should be less than 9, %hhu\n");
+				dbg(CLEAN_OUTPUT, "SENT %u PACKETS!\n", 1);
+				dbg(CLEAN_OUTPUT, "should be less than 9, %hhu\n");
 				 dbg (TRANSPORT_CHANNEL, "Node %hu sends | (DATA, seq=%u, ack=%u)\n", TOS_NODE_ID, socketTuple.seq, socketTuple.ack);
 
 				sendTCP (0b00010000, socketTuple.dest.addr, socketTuple.src, socketTuple.dest.port, socketTuple.seq, socketTuple.ack, data, dataBytesInPack);
@@ -1397,16 +1397,14 @@ void printSockets(){
 									call Transport.updateSocketArray(socketTuple.fd, &socketTuple);
 
 
-									/*dbg(CLEAN_OUTPUT, "NUM UNACKED: %u\n", numUnacked);*/
 
 
 									continueTCPStream(socketTuple);
 
 
-									//dbg(TRANSPORT_CHANNEL, "next seq: %u\n", socketTuple.seq);
 
 
-								//	dbg (TRANSPORT_CHANNEL, "Received an ack from Node %hu  |  (Data: %hhu, seq=%u, ack=%u)\n", myMsg->src, *((uint8_t *)(myMsg->payload + 11)),*((uint32_t *)(myMsg->payload + 3)), *((uint8_t *)(myMsg->payload + 7)));
+								dbg (TRANSPORT_CHANNEL, "Received an ack from Node %hu  |  (Data: %hhu, seq=%u, ack=%u)\n", myMsg->src, *((uint8_t *)(myMsg->payload + 11)),*((uint32_t *)(myMsg->payload + 3)), *((uint8_t *)(myMsg->payload + 7)));
 									//dbg (CLEAN_OUTPUT, "Received an ack from Node %hu  |  (Data: %hhu, seq=%u, ack=%u)\n", myMsg->src, *((uint8_t *)(myMsg->payload + 11)),*((uint32_t *)(myMsg->payload + 3)), *((uint8_t *)(myMsg->payload + 7)));
 
 									//dbg (CLEAN_OUTPUT, "Received Data: %hhu\n", *((uint8_t *)(myMsg->payload + 11)));
