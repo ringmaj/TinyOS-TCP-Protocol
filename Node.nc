@@ -82,13 +82,13 @@ implementation{ // each node's private variables must be declared here, (or it w
 
 
 	// Holds current nodes understanding of entire network topology
-	
+
 	uint8_t routingTableNeighborArray[PACKET_MAX_PAYLOAD_SIZE * 8][PACKET_MAX_PAYLOAD_SIZE * 8];
 	uint16_t routingTableNumNodes;
-	
 
 
-	
+
+
 	uint16_t forwardingTableTo[50];
 	uint16_t forwardingTableNext[50];
 	uint16_t pathCost[50];
@@ -325,7 +325,7 @@ implementation{ // each node's private variables must be declared here, (or it w
 		socket_t fd;
 		uint8_t appPayload [9];
 		*((uint16_t*)(appPayload)) = socketTuple.dest.addr;
-		
+
 		memcpy(appPayload + 2, socketTuple.rcvdBuff + socketTuple.indLastByteReadFromRCVD + 1, 9);
 		socketTuple.indLastByteReadFromRCVD += 9;
 		// runs once for each App client
@@ -643,6 +643,50 @@ void printSockets(){
 
 
 
+void resetSendBuffer(socket_store_t socketTuple)
+{
+	int j;
+	int i;
+	uint16_t numBytesLeftToSend;
+	if(socketTuple.lastSent >= 128){
+		dbg(FINAL_OUTPUT, "SendBuff full, reallocating!\n");
+		socketTuple.lastSent = 0;
+
+		// reallocate sendBuff
+		j = socketTuple.numberOfBytesSentAndAcked;
+
+
+		for(i = 0; i < SOCKET_BUFFER_SIZE; i++){
+			socketTuple.sendBuff[i] = 0;
+		}
+
+		for(i = 0; i < socketTuple.transfer; i++){
+			socketTuple.sendBuff[i] = j;
+			j++;
+		}
+
+		socketTuple.lastSent = 0;
+	}
+
+	// Update socket array
+	call Transport.updateSocketArray (socketTuple.fd, &socketTuple);
+}
+
+void updateUnverifiedPacket(unAckedPackets unverifiedPacket, socket_store_t socketTuple, int timeOut, int dataBytesInPack, int *data)
+{
+	// update the unackedPacket to add to our Queue
+	unverifiedPacket.index = socketTuple.lastSent;
+	unverifiedPacket.lastSent = socketTuple.lastSent;
+	unverifiedPacket.seq = socketTuple.seq;
+	unverifiedPacket.ack = socketTuple.ack;
+	unverifiedPacket.timeOut = timeOut;
+	unverifiedPacket.bytes = dataBytesInPack;
+	unverifiedPacket.data = *data;
+	unverifiedPacket.destAddr = socketTuple.dest.addr;
+	unverifiedPacket.srcPort = socketTuple.src;
+	unverifiedPacket.destPort = socketTuple.dest.port;
+	unverifiedPacket.lastSent = socketTuple.lastSent;
+}
 
 
 	void continueTCPStream (socket_store_t socketTuple) {	// client/sender
@@ -654,6 +698,7 @@ void printSockets(){
 		int numPacketsToSend; // stores the number of packets to send
 		int tempTimeOut;
 		int numOutstandingPackets;
+		int numBytesLeftToSend;
 
 		// holds our packet info for verifying ack received. Holds index #, ack #, and timeout
 		unAckedPackets unverifiedPacket;
@@ -663,7 +708,7 @@ void printSockets(){
 		dataBytesInPack = 9;
 
 
-		dbg(TRANSPORT_CHANNEL, "Number of Bytes Sent and Acked: %hhu\n", socketTuple.numberOfBytesSentAndAcked);
+		dbg(TRANSPORT_CHANNEL, "Number of Bytes Sent and Acked: %hu\n", socketTuple.numberOfBytesSentAndAcked);
 		dbg(TRANSPORT_CHANNEL, "Transfer: %hu\n", socketTuple.transfer);
 
 		// if we already have sent the same number of bytes as our transfer, we may have already finished sending. Just wait for the acks to be sent or timeout and resend the packets
@@ -671,15 +716,12 @@ void printSockets(){
 		{
 			/*dbg(CLEAN_OUTPUT, "We've already sent %hhu bytes! Wait for the acks or resend later\n", socketTuple.numberOfBytesSentAndAcked);*/
 			dbg(TRANSPORT_CHANNEL, "Done transmitting!\n");
-			dbg (CLEAN_OUTPUT,"Bytes sent/acked: %hhu\t Transfer: %hu\n", socketTuple.numberOfBytesSentAndAcked ,socketTuple.transfer);
+			dbg (CLEAN_OUTPUT,"Bytes sent/acked: %hu\t Transfer: %hu\n", socketTuple.numberOfBytesSentAndAcked ,socketTuple.transfer);
 
 			return;
 
 		}
 
-
-		// if there is still data to send, we haven't reached the end of our sendBuffer
-		if(socketTuple.numberOfBytesSentAndAcked < socketTuple.transfer){
 
 			// Sending our first packet
 			if(socketTuple.numberOfBytesSentAndAcked == 0)
@@ -696,25 +738,7 @@ void printSockets(){
 			dbg(TRANSPORT_CHANNEL, "\n");
 
 			// check if our sendBuffer is full, if it is, change lastSent to 0 and reallocate the sendBuff to fit all of the new data
-			if(socketTuple.lastSent >= 128){
-				dbg(TRANSPORT_CHANNEL, "SendBuff full, reallocating!\n");
-				socketTuple.lastSent = 0;
-
-				// reallocate sendBuff
-				j = socketTuple.numberOfBytesSentAndAcked;
-
-
-				for(i = 0; i < SOCKET_BUFFER_SIZE; i++){
-					socketTuple.sendBuff[i] = 0;
-				}
-
-				for(i = 0; i < socketTuple.transfer; i++){
-					socketTuple.sendBuff[i] = j;
-					j++;
-				}
-
-				socketTuple.lastSent = 0;
-			}
+			//resetSendBuffer(socketTuple);
 
 				// Update socket array
 				call Transport.updateSocketArray (socketTuple.fd, &socketTuple);
@@ -727,38 +751,14 @@ void printSockets(){
 		 rcvd_ack_time = call clientTimer.getNow() + 2*socketTuple.RTT;
 		 numOutstandingPackets = (socketTuple.numberOfBytesSent - socketTuple.numberOfBytesSentAndAcked)/9;
 
-
-		 // store the time that the ack should arrive before inside of timeOut[]
-		 /*socketTuple.timeOut[socketTuple.lowestUnackedSentByte] = rcvd_ack_time;*/
-
 		 dbg(TRANSPORT_CHANNEL, "current time: %u\n", call clientTimer.getNow());
 		 dbg(TRANSPORT_CHANNEL, "timeout: %u\n", rcvd_ack_time);
-
-
-			// increment last sent since a packet was just sent
-			/*socketTuple.lastSent += dataBytesInPack - 1;*/
-
-			//dbg(CLEAN_OUTPUT, "Last sent: %hhu\n", socketTuple.lastSent);
 
 			// Update socket array
 			call Transport.updateSocketArray (socketTuple.fd, &socketTuple);
 
-
-			/*if (9 * socketTuple.sndWndSize < dataBytesInPack) {
-				dataBytesInPack = 9 * socketTuple.sndWndSize;
-			}*/
-
-			// update the unackedPacket Queue
-			unverifiedPacket.index = socketTuple.lastSent;
-			unverifiedPacket.lastSent = socketTuple.lastSent;
-			unverifiedPacket.seq = socketTuple.seq;
-			unverifiedPacket.ack = socketTuple.ack;
-			unverifiedPacket.timeOut = rcvd_ack_time;
-			unverifiedPacket.bytes = dataBytesInPack;
-			unverifiedPacket.data = data;
-			unverifiedPacket.destAddr = socketTuple.dest.addr;
-			unverifiedPacket.srcPort = socketTuple.src;
-			unverifiedPacket.destPort = socketTuple.dest.port;
+			// update the unackedPacket object, get the current sending window and add it to the unacked Queue
+			updateUnverifiedPacket(unverifiedPacket, socketTuple, tempTimeOut, dataBytesInPack, data);
 
 
 
@@ -772,43 +772,55 @@ void printSockets(){
 
 //--------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
+		dbg(FINAL_OUTPUT, "theirAdvertisedWindow = %hhu, sndWndSize %hu\n", socketTuple.theirAdvertisedWindow, socketTuple.sndWndSize);
 
 			// if the receiver has enough space to receive our full sending window, then send the packets
-			if(socketTuple.theirAdvertisedWindow >= socketTuple.sndWndSize){
-				numPacketsToSend = socketTuple.sndWndSize/9; // find the number of packets to send
+
+				numPacketsToSend = 0; // find the number of packets to send
+
+				numBytesLeftToSend = socketTuple.transfer - socketTuple.numberOfBytesSentAndAcked;
+				dbg(FINAL_OUTPUT, "num bytes left to send: %hu\n", numBytesLeftToSend);
+
+				while ( (numPacketsToSend * 9 < numBytesLeftToSend) && (numPacketsToSend * 9 < socketTuple.theirAdvertisedWindow) && (numPacketsToSend < (socketTuple.sndWndSize/9)))
+					numPacketsToSend++;
+
+
 				tempTimeOut = rcvd_ack_time;
 
-				dbg(TRANSPORT_CHANNEL, "CASE 1 \n");
-				dbg (TRANSPORT_CHANNEL, "(numberOfBytesSent(%hhu) - numberOfBytesSentAndAcked(%hhu))/9 = %hhu\n", socketTuple.numberOfBytesSent, socketTuple.numberOfBytesSentAndAcked, numOutstandingPackets );
+				dbg(FINAL_OUTPUT, "CASE 1 \n");
+				dbg (FINAL_OUTPUT, "(numberOfBytesSent(%hu) - numberOfBytesSentAndAcked(%hu))/9 = %hhu\n", socketTuple.numberOfBytesSent, socketTuple.numberOfBytesSentAndAcked, numOutstandingPackets );
+				dbg(FINAL_OUTPUT, "numOutstandingPackets %d\n", numOutstandingPackets);
 
-				dbg(CLEAN_OUTPUT, "numOutstandingPackets %d\n", numOutstandingPackets);
-				dbg(CLEAN_OUTPUT, "numPacketsToSend %d\n", numPacketsToSend);
-
-
+				dbg(FINAL_OUTPUT, "numPacketsToSend %d\n", numPacketsToSend);
 
 				numPacketsToSend -= numOutstandingPackets;
 				if(numPacketsToSend <= 0)
 					numPacketsToSend = 0;
 
+					dbg(FINAL_OUTPUT, "numPacketsToSend %d\n", numPacketsToSend);
 
 
 				for(i = 0; i < numPacketsToSend; i++){
+
+					// check if our sendBuffer is full, if it is, change lastSent to 0 and reallocate the sendBuff to fit all of the new data
+					resetSendBuffer(socketTuple);
+
 
 					//calculate how much data should go in pack (at most 9). But may be less if there aren't 9 bytes left to send, or if the window size isn't that big. amount to put in pack = min (9, windowSize, dataLeftToSend)
 					if ((socketTuple.transfer - socketTuple.lastSent) < dataBytesInPack) {
 						dataBytesInPack = socketTuple.transfer - socketTuple.lastSent;
 						dbg("bytes in pack: %u\n", dataBytesInPack);
-						for(j = 0; j < 9 - dataBytesInPack + 1; j++)
-						socketTuple.sendBuff[socketTuple.lastSent + dataBytesInPack + j] = 0;
+						/*for(j = 0; j < 9 - dataBytesInPack + 1; j++)
+						socketTuple.sendBuff[socketTuple.lastSent + dataBytesInPack + j] = 0;*/
 					}
 
 					if(dataBytesInPack <= 0)
 					break;
 
-					dbg(TRANSPORT_CHANNEL, "dataBytesInPack = %d\n", dataBytesInPack);
+					//dbg(TRANSPORT_CHANNEL, "dataBytesInPack = %d\n", dataBytesInPack);
 
-
-
+					// update the unackedPacket object, get the current sending window and add it to the unacked Queue
+					/*updateUnverifiedPacket(unverifiedPacket, socketTuple, tempTimeOut, dataBytesInPack, &(socketTuple.sendBuff[socketTuple.lastSent]));*/
 
 					// update the unackedPacket to add to our Queue
 					unverifiedPacket.index = socketTuple.lastSent;
@@ -830,164 +842,30 @@ void printSockets(){
 					// Wait 1 RTT and check if the ack has arrived yet, if not resend the packet
 					 call clientTimer.startOneShot(tempTimeOut);
 
+					 dbg(CLEAN_OUTPUT, "SENT %d PACKETS! %u Bytes!\n", i+1,dataBytesInPack);
+					 dbg (TRANSPORT_CHANNEL, "Node %hu sends | (DATA, seq=%u, ack=%u)\n", TOS_NODE_ID, socketTuple.seq, socketTuple.ack);
+
 					// send the packet
 					sendTCP (0b00010000, socketTuple.dest.addr, socketTuple.src, socketTuple.dest.port, socketTuple.seq, socketTuple.ack, data, dataBytesInPack);
-					socketTuple.numberOfBytesSent += 9;
-					// update the seq and data
-					socketTuple.seq += 9;
-					socketTuple.lastSent +=9;
+					socketTuple.numberOfBytesSent += dataBytesInPack;
+					socketTuple.seq += dataBytesInPack;
+					socketTuple.lastSent +=dataBytesInPack;
 					data = &(socketTuple.sendBuff[socketTuple.lastSent]);
-					//dbg(CLEAN_OUTPUT, "tempTimer: %u\n", tempTimeOut);
-					//dbg(CLEAN_OUTPUT, "tempTimer\n");
 					tempTimeOut += 200;
 
-					dbg(CLEAN_OUTPUT, "SENT %d PACKETS! %u Bytes!\n", i+1,dataBytesInPack);
-					dbg (TRANSPORT_CHANNEL, "Node %hu sends | (DATA, seq=%u, ack=%u)\n", TOS_NODE_ID, socketTuple.seq, socketTuple.ack);
+
 
 				}
 
-
-
-		}
-
-		else 	// if the receiver doesn't have enough space to receive our full sending window size, send fewer packets
-
-		{
-
-			if( socketTuple.theirAdvertisedWindow < 9){
-
-				dbg(TRANSPORT_CHANNEL, "CASE 2 \n");
-
-
-				// update the unackedPacket Queue
-				unverifiedPacket.index = socketTuple.lastSent;
-				unverifiedPacket.lastSent = socketTuple.lastSent;
-				unverifiedPacket.seq = socketTuple.seq;
-				unverifiedPacket.ack = socketTuple.ack;
-				unverifiedPacket.timeOut = rcvd_ack_time;
-				unverifiedPacket.bytes = dataBytesInPack;
-				unverifiedPacket.data = data;
-				unverifiedPacket.destAddr = socketTuple.dest.addr;
-				unverifiedPacket.srcPort = socketTuple.src;
-				unverifiedPacket.destPort = socketTuple.dest.port;
-
-				//calculate how much data should go in pack (at most 9). But may be less if there aren't 9 bytes left to send, or if the window size isn't that big. amount to put in pack = min (9, windowSize, dataLeftToSend)
-				if ((socketTuple.transfer - socketTuple.lastSent) < dataBytesInPack) {
-					dataBytesInPack = socketTuple.transfer - socketTuple.lastSent;
-					dbg("bytes in pack: %u\n", dataBytesInPack);
-					for(j = 0; j < 9 - dataBytesInPack + 1; j++)
-					socketTuple.sendBuff[socketTuple.lastSent + dataBytesInPack + j] = 0;
-				}
-
-				if(dataBytesInPack == 0)
-					return;
-
-				if(socketTuple.theirAdvertisedWindow < dataBytesInPack)
-					dataBytesInPack = socketTuple.theirAdvertisedWindow;
-
-				dbg (TRANSPORT_CHANNEL, "(numberOfBytesSent(%hhu) - numberOfBytesSentAndAcked(%hhu))/9 = %hhu\n", socketTuple.numberOfBytesSent, socketTuple.numberOfBytesSentAndAcked, numOutstandingPackets );
-
-				// update the unackedPacket Queue
-				call ackQ.enqueue(unverifiedPacket);
-
-				// Wait 1 RTT and check if the ack has arrived yet, if not resend the packet
-				 call clientTimer.startOneShot(tempTimeOut);
-				 dbg(CLEAN_OUTPUT, "SENT %d PACKETS! %u Bytes!\n", 1,dataBytesInPack);
-				dbg(CLEAN_OUTPUT, "should be less than 9, %hhu\n");
-				 dbg (TRANSPORT_CHANNEL, "Node %hu sends | (DATA, seq=%u, ack=%u)\n", TOS_NODE_ID, socketTuple.seq, socketTuple.ack);
-
-				sendTCP (0b00010000, socketTuple.dest.addr, socketTuple.src, socketTuple.dest.port, socketTuple.seq, socketTuple.ack, data, dataBytesInPack);
-				socketTuple.numberOfBytesSent += dataBytesInPack;
-
-
-			}
-			else
-			{
-
-				dbg(TRANSPORT_CHANNEL, "CASE 3 \n");
-
-				// update the number of packets to send
-				numPacketsToSend = socketTuple.theirAdvertisedWindow/9;
-
-				numPacketsToSend -= numOutstandingPackets;
-				if(numPacketsToSend <= 0)
-					numPacketsToSend = 0;
-
-
-			for(i = 0; i < numPacketsToSend; i++){
-
-				//calculate how much data should go in pack (at most 9). But may be less if there aren't 9 bytes left to send, or if the window size isn't that big. amount to put in pack = min (9, windowSize, dataLeftToSend)
-				if ((socketTuple.transfer - socketTuple.lastSent) < dataBytesInPack) {
-					dataBytesInPack = socketTuple.transfer - socketTuple.lastSent;
-					dbg("bytes in pack: %u\n", dataBytesInPack);
-					for(j = 0; j < 9 - dataBytesInPack + 1; j++)
-					socketTuple.sendBuff[socketTuple.lastSent + dataBytesInPack + j] = 0;
-				}
-
-				if(dataBytesInPack <= 0)
-				break;
-
-				dbg(TRANSPORT_CHANNEL, "dataBytesInPack = %d\n", dataBytesInPack);;
-
-				dbg (TRANSPORT_CHANNEL, "(numberOfBytesSent(%hhu) - numberOfBytesSentAndAcked(%hhu))/9 = %hhu\n", socketTuple.numberOfBytesSent, socketTuple.numberOfBytesSentAndAcked, numOutstandingPackets );
-
-
-				// update the unackedPacket to add to our Queue
-				unverifiedPacket.index = socketTuple.lastSent;
-				unverifiedPacket.lastSent = socketTuple.lastSent;
-				unverifiedPacket.seq = socketTuple.seq;
-				unverifiedPacket.ack = socketTuple.ack;
-				unverifiedPacket.timeOut = tempTimeOut;
-				unverifiedPacket.bytes = dataBytesInPack;
-				unverifiedPacket.data = data;
-				unverifiedPacket.destAddr = socketTuple.dest.addr;
-				unverifiedPacket.srcPort = socketTuple.src;
-				unverifiedPacket.destPort = socketTuple.dest.port;
-				unverifiedPacket.lastSent = socketTuple.lastSent;
-
-				// update the unackedPacket Queue
-				call ackQ.enqueue(unverifiedPacket);
-
-
-				// Wait 1 RTT and check if the ack has arrived yet, if not resend the packet
-				 call clientTimer.startOneShot(tempTimeOut);
-
-
-				// send the packet
-				sendTCP (0b00010000, socketTuple.dest.addr, socketTuple.src, socketTuple.dest.port, socketTuple.seq, socketTuple.ack, data, dataBytesInPack);
-				socketTuple.numberOfBytesSent += dataBytesInPack;
-				// update the seq and data
-				socketTuple.seq += 9;
-				socketTuple.lastSent +=9;
-				data = &(socketTuple.sendBuff[socketTuple.lastSent]);
-				//dbg(CLEAN_OUTPUT, "tempTimer: %u\n", tempTimeOut);
-				//dbg(CLEAN_OUTPUT, "tempTimer\n");
-				tempTimeOut += 200;
-				dbg(CLEAN_OUTPUT, "SENT %d PACKETS! %u Bytes!\n", i+1,dataBytesInPack);
-				dbg (TRANSPORT_CHANNEL, "Node %hu sends | (DATA, seq=%u, ack=%u)\n", TOS_NODE_ID, socketTuple.seq, socketTuple.ack);
-
-			}
-
-			}
-
-
-
-		}
-
-
-			call Transport.updateSocketArray (socketTuple.fd, &socketTuple);
-
-		}
-		else
-		{
-				dbg(TRANSPORT_CHANNEL, "Done transmitting!\n");
-				dbg (CLEAN_OUTPUT,"Bytes sent/acked: %hhu\t Transfer: %hu\n", socketTuple.numberOfBytesSentAndAcked ,socketTuple.transfer);
-
-		}
-
+				dbg(FINAL_OUTPUT, "SENT %d PACKETS!\n", numPacketsToSend);
 
 
 	}
+
+
+
+
+
 
 	event void Boot.booted(){
 		int i;
@@ -1297,7 +1175,7 @@ void printSockets(){
 											// Store the fd in a hashmap so it can be easily accessed later
 											dbg (COMMAND_CHANNEL, "Storing file descriptor %hhu in hashmap by srcPort %hhu, destPort%hhu, and destAddress %hhu\n", socketTuple.fd, myMsg->payload[1], myMsg->payload[2], myMsg->src);
 											call socketHashMap.insert ((myMsg->payload[1] << 24)|(myMsg->payload[2] << 16)|(myMsg->src), socketTuple.fd);
-											
+
 											printSockets();
 
 
@@ -1650,10 +1528,10 @@ void printSockets(){
 
 								// received the correct ACK! Now update the ack to (ACK + 1) since we're now expecting the next packets
 
-								
+
 								socketTuple.ack += 9;
 
-								
+
 								call Transport.updateSocketArray(fd, &socketTuple);
 
 
@@ -1664,9 +1542,9 @@ void printSockets(){
 								temp = SOCKET_BUFFER_SIZE - ((socketTuple.ack - 1) - socketTuple.indLastByteReadFromRCVD);
 								dbg (TRANSPORT_CHANNEL, "Sending ack to Node %hu AdvertisedWindow: %hhu |  (Data: %hhu %hhu %hhu %hhu %hhu %hhu %hhu %hhu %hhu, seq=%u, ack=%u)\n", myMsg->src, temp, myMsg->payload[11], myMsg->payload[12], myMsg->payload[13], myMsg->payload[14], myMsg->payload[15], myMsg->payload[16], myMsg->payload[17], myMsg->payload[18], myMsg->payload[19], socketTuple.seq, socketTuple.ack);
 								sendTCP (0b01000000, socketTuple.dest.addr, socketTuple.src, socketTuple.dest.port, socketTuple.seq, socketTuple.ack, &temp, sizeof(temp));
-								
-								
-								
+
+
+
 								//If the data pack is for an App, then handle the app here:
 								if (myMsg->payload[2] == appServerPortNum) {
 									// the pack is for an app connection (because the port number matches the app port number)
@@ -1677,13 +1555,13 @@ void printSockets(){
 										memcpy(appUsr.name, myMsg->payload + 11, 9);
 										call appUserList.enqueue(appUsr);
 									}
-									
-									
+
+
 									// if the data is finished being sent, then forward the data to all the other app nodes
 									//if (socketTuple.numBytesRcvd >= socketTuple.transfer) {
 										AppServerForwardMessage(socketTuple);
 									//}
-									
+
 								}
 								socketTuple.numBytesRcvd += 9;
 							}
@@ -2124,15 +2002,15 @@ void printSockets(){
 
 			// timer to attempt connections
 			call serverTimer.startPeriodic(2000);
-			
+
 			//------------------------------Copy of SetTestServer finished-----------------------------
-			
+
 			appServerPortNum = port;	// receive.receive will check if a packet's port is set to appServerPortNum
 	 	}
 
 	 	event void CommandHandler.setAppClient(uint16_t destination, uint8_t srcPort, uint8_t destPort, uint8_t * username){
 			int transfer = SOCKET_BUFFER_SIZE;
-			
+
 			//------------------------------Most of this is a modified copy of SetTestClient-----------------------------
 			int i;
 			socket_addr_t ad;
@@ -2223,7 +2101,7 @@ void printSockets(){
 
 	 	event void CommandHandler.appClientSend(uint16_t destination, uint8_t srcPort, uint8_t destPort, uint8_t messageLen, uint8_t * message){
 	 		dbg (CLEAN_OUTPUT, "Called appClientSend! Message is: %sm messageLen is: %hhu\n", (char *)message, messageLen);
-			
+
 
 
 
