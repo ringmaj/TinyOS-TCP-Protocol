@@ -991,7 +991,6 @@ void printSockets(){
 
 		socket_store_t socketTuple;
 		int i;
-		int numUnacked;
 		i = call socketHashMap.get(((nodeSrcPort) << 24)|((nodeDestPort) << 16)| nodeDest);
 
 
@@ -1104,6 +1103,7 @@ void printSockets(){
 						socket_addr_t address;
 						socket_addr_t * addr;
 						uint8_t * buffPtr;
+						int numUnacked;
 
 
 						case 0b10000000:	// SYN Packet
@@ -1293,18 +1293,28 @@ void printSockets(){
 
 								if(call clientTimer.getNow() < (call ackQ.element(0)).timeOut)
 								{
+									numUnacked = 0;
+
+									// check if its time to continueTCPStream
+									for( i = 0; i < call ackQ.size(); i++){
+										numUnacked++;
+									}
+
+									if(numUnacked == socketTuple.sndWndSize)
+										continueTCPStream(socketTuple);
 
 									// ACK SUCCESSFULLY RECEIVED ON TIME, DEQUEUE
 									socketTuple.lastAck++;
-									socketTuple.lastSuccessfulSeq = socketTuple.seq;
 									socketTuple.seq += (call ackQ.element(0)).bytes;
 									socketTuple.lastSent += (call ackQ.element(0)).bytes;
 									socketTuple.numberOfBytesSentAndAcked += (call ackQ.element(0)).bytes;
 									call ackQ.dequeue();
 									call Transport.updateSocketArray(socketTuple.fd, &socketTuple);
 
-									// check if its time to continueTCPStream
-									for( i = 0; i < call ackQ.size(); i++)
+
+									dbg(CLEAN_OUTPUT, "NUM UNACKED: %u\n", numUnacked);
+
+
 
 
 									//dbg(TRANSPORT_CHANNEL, "next seq: %u\n", socketTuple.seq);
@@ -1315,7 +1325,7 @@ void printSockets(){
 
 									//dbg (CLEAN_OUTPUT, "Received Data: %hhu\n", *((uint8_t *)(myMsg->payload + 11)));
 
-									continueTCPStream(socketTuple);
+
 								}
 								else {
 
