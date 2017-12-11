@@ -16,6 +16,7 @@ char ROUTING_CHANNEL[]="routing";
 // Project 3
 char TRANSPORT_CHANNEL[]="transport";
 char CLEAN_OUTPUT[]="cleanoutput";
+char FINAL_OUTPUT[]="finaloutput";
 // Personal Debuggin Channels for some of the additional models implemented.
 char HASHMAP_CHANNEL[]="hashmap";
 #endif
