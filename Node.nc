@@ -641,6 +641,7 @@ void printSockets(){
 		int dataBytesInPack = 9; // how many bytes should be copied into the 9 byte data section of the TCP pack payload
 		int numPacketsToSend; // stores the number of packets to send
 		int tempTimeOut;
+		int numOutstandingPackets;
 
 		// holds our packet info for verifying ack received. Holds index #, ack #, and timeout
 		unAckedPackets unverifiedPacket;
@@ -700,6 +701,8 @@ void printSockets(){
 
 		 // record time that ack should arrive before
 		 rcvd_ack_time = call clientTimer.getNow() + socketTuple.RTT;
+		 numOutstandingPackets = (socketTuple.numberOfBytesSent - socketTuple.numberOfBytesSentAndAcked)/9;
+
 
 		 // store the time that the ack should arrive before inside of timeOut[]
 		 /*socketTuple.timeOut[socketTuple.lowestUnackedSentByte] = rcvd_ack_time;*/
@@ -752,11 +755,22 @@ void printSockets(){
 			dbg(CLEAN_OUTPUT, "numberOfBytesSent: %u\n", socketTuple.lastSent);*/
 			// make sure all data unused data don't have any garbage values
 
+//--------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
 
 			// if the receiver has enough space to receive our full sending window, then send the packets
 			if(socketTuple.theirAdvertisedWindow >= socketTuple.sndWndSize){
 				numPacketsToSend = socketTuple.sndWndSize/9; // find the number of packets to send
 				tempTimeOut = rcvd_ack_time;
+
+
+				dbg (TRANSPORT_CHANNEL, "(numberOfBytesSent(%hhu) - numberOfBytesSentAndAcked(%hhu))/9 = %hhu\n", socketTuple.numberOfBytesSent, socketTuple.numberOfBytesSentAndAcked, numOutstandingPackets );
+
+
+				numPacketsToSend -= numOutstandingPackets;
+				if(numPacketsToSend <= 0)
+					numPacketsToSend = 0;
+
 
 
 				for(i = 0; i < numPacketsToSend; i++){
@@ -788,11 +802,13 @@ void printSockets(){
 					socketTuple.seq += 9;
 					socketTuple.lastSent +=9;
 					data = &(socketTuple.sendBuff[socketTuple.lastSent]);
-					dbg(CLEAN_OUTPUT, "tempTimer: %u\n", tempTimeOut);
-					dbg(CLEAN_OUTPUT, "tempTimer\n");
+					//dbg(CLEAN_OUTPUT, "tempTimer: %u\n", tempTimeOut);
+					//dbg(CLEAN_OUTPUT, "tempTimer\n");
 					/*tempTimeOut += 100;*/
 
 					dbg(CLEAN_OUTPUT, "SENT %u PACKETS!\n", i+1);
+					dbg (TRANSPORT_CHANNEL, "Node %hu sends | (ACK, seq=%u, ack=%u)\n", TOS_NODE_ID, socketTuple.seq, socketTuple.ack);
+
 				}
 
 
@@ -804,22 +820,35 @@ void printSockets(){
 		{
 
 			if( socketTuple.theirAdvertisedWindow < 9){
+
+				dbg (TRANSPORT_CHANNEL, "(numberOfBytesSent(%hhu) - numberOfBytesSentAndAcked(%hhu))/9 = %hhu\n", socketTuple.numberOfBytesSent, socketTuple.numberOfBytesSentAndAcked, numOutstandingPackets );
+
+
 				// Wait 1 RTT and check if the ack has arrived yet, if not resend the packet
 				 call clientTimer.startOneShot(tempTimeOut);
-
 
 				sendTCP (0b00010000, socketTuple.dest.addr, socketTuple.src, socketTuple.dest.port, socketTuple.seq, socketTuple.ack, data, dataBytesInPack);
 				socketTuple.numberOfBytesSent += dataBytesInPack;
 				// update the unackedPacket Queue
 				call ackQ.enqueue(unverifiedPacket);
+				dbg(CLEAN_OUTPUT, "SENT %u PACKETS!\n", 1);
+				dbg (TRANSPORT_CHANNEL, "Node %hu sends | (ACK, seq=%u, ack=%u)\n", TOS_NODE_ID, socketTuple.seq, socketTuple.ack);
+
 			}
 			else
 			{
 				// update the number of packets to send
 				numPacketsToSend = socketTuple.theirAdvertisedWindow/9;
 
+				numPacketsToSend -= numOutstandingPackets;
+				if(numPacketsToSend <= 0)
+					numPacketsToSend = 0;
+
 
 			for(i = 0; i < numPacketsToSend; i++){
+
+				dbg (TRANSPORT_CHANNEL, "(numberOfBytesSent(%hhu) - numberOfBytesSentAndAcked(%hhu))/9 = %hhu\n", socketTuple.numberOfBytesSent, socketTuple.numberOfBytesSentAndAcked, numOutstandingPackets );
+
 
 				// update the unackedPacket to add to our Queue
 				unverifiedPacket.index = socketTuple.lastSent;
@@ -840,6 +869,7 @@ void printSockets(){
 				// Wait 1 RTT and check if the ack has arrived yet, if not resend the packet
 				 call clientTimer.startOneShot(tempTimeOut);
 
+
 				// send the packet
 				sendTCP (0b00010000, socketTuple.dest.addr, socketTuple.src, socketTuple.dest.port, socketTuple.seq, socketTuple.ack, data, 9);
 				socketTuple.numberOfBytesSent += dataBytesInPack;
@@ -847,10 +877,12 @@ void printSockets(){
 				socketTuple.seq += 9;
 				socketTuple.lastSent +=9;
 				data = &(socketTuple.sendBuff[socketTuple.lastSent]);
-				dbg(CLEAN_OUTPUT, "tempTimer: %u\n", tempTimeOut);
-				dbg(CLEAN_OUTPUT, "tempTimer\n");
+				//dbg(CLEAN_OUTPUT, "tempTimer: %u\n", tempTimeOut);
+				//dbg(CLEAN_OUTPUT, "tempTimer\n");
 				/*tempTimeOut += 100;*/
-				dbg(CLEAN_OUTPUT, "SENT %u PACKETS!\n", numPacketsToSend);
+				dbg(CLEAN_OUTPUT, "SENT %u PACKETS!\n", i+1);
+				dbg (TRANSPORT_CHANNEL, "Node %hu sends | (ACK, seq=%u, ack=%u)\n", TOS_NODE_ID, socketTuple.seq, socketTuple.ack);
+
 			}
 
 			}
@@ -1294,28 +1326,29 @@ void printSockets(){
 
 								if(call clientTimer.getNow() < (call ackQ.element(0)).timeOut)
 								{
-									numUnacked = 0;
+									/*numUnacked = 0;
 
 									// check if its time to continueTCPStream
 									for( i = 0; i < call ackQ.size(); i++){
 										numUnacked++;
-									}
-									dbg (TRANSPORT_CHANNEL, "numUnacked Packs = %hhu, (numberOfBytesSent(%hhu) - numberOfBytesSentAndAcked(%hhu))/9 = %hhu\n", numUnacked, socketTuple.numberOfBytesSent, socketTuple.numberOfBytesSentAndAcked, (socketTuple.numberOfBytesSent - socketTuple.numberOfBytesSentAndAcked)/9 );
+									}*/
+									/*dbg (TRANSPORT_CHANNEL, "numUnacked Packs = %hhu, (numberOfBytesSent(%hhu) - numberOfBytesSentAndAcked(%hhu))/9 = %hhu\n", numUnacked, socketTuple.numberOfBytesSent, socketTuple.numberOfBytesSentAndAcked, (socketTuple.numberOfBytesSent - socketTuple.numberOfBytesSentAndAcked)/9 );
 									if(numUnacked == socketTuple.sndWndSize)
-										continueTCPStream(socketTuple);
+										continueTCPStream(socketTuple);*/
 
 									// ACK SUCCESSFULLY RECEIVED ON TIME, DEQUEUE
-									socketTuple.lastAck++;
-									socketTuple.seq += (call ackQ.element(0)).bytes;
-									socketTuple.lastSent += (call ackQ.element(0)).bytes;
+								//	socketTuple.lastAck++;
+									//socketTuple.seq += (call ackQ.element(0)).bytes;
+									//socketTuple.lastSent += (call ackQ.element(0)).bytes;
 									socketTuple.numberOfBytesSentAndAcked += (call ackQ.element(0)).bytes;
 									call ackQ.dequeue();
 									call Transport.updateSocketArray(socketTuple.fd, &socketTuple);
 
 
-									dbg(CLEAN_OUTPUT, "NUM UNACKED: %u\n", numUnacked);
+									/*dbg(CLEAN_OUTPUT, "NUM UNACKED: %u\n", numUnacked);*/
 
 
+									continueTCPStream(socketTuple);
 
 
 									//dbg(TRANSPORT_CHANNEL, "next seq: %u\n", socketTuple.seq);
