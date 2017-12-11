@@ -42,6 +42,9 @@ class TestSim:
 	# Personal Debuggin Channels for some of the additional models implemented.
 	HASHMAP_CHANNEL="hashmap";
 
+	FINAL_OUTPUT="finaloutput";
+
+
 	# Initialize Vars
 	numMote=0
 
@@ -182,8 +185,9 @@ def main():
 	s.loadTopo("example.topo");
 	s.loadNoise("no_noise.txt");
 	s.bootAll();
-	s.addChannel(s.TRANSPORT_CHANNEL);
-	s.addChannel(s.CLEAN_OUTPUT);
+	#s.addChannel(s.TRANSPORT_CHANNEL);
+	#s.addChannel(s.CLEAN_OUTPUT);
+	s.addChannel(s.FINAL_OUTPUT);
 	#s.addChannel(s.COMMAND_CHANNEL);
 	#s.addChannel(s.GENERAL_CHANNEL);
 	#s.addChannel(s.NEIGHBOR_CHANNEL);
@@ -222,10 +226,10 @@ def main():
 	# s.cmdTestServer (1, 4);
 	# s.runTime(10);
 	#s.cmdTestClient (1, 2, 1, 2);
-	s.cmdTestClient (1, 2, 2, 4, 54);
+	s.cmdTestClient (1, 2, 2, 4, 122);
 	s.runTime(10);
 	#clientclose srcport and destport are backwards
-	s.cmdClientClose (1, 2, 4, 2);
+	#s.cmdClientClose (1, 2, 4, 2);
 	s.runTime(10);
 
 
