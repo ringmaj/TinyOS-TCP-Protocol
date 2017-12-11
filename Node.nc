@@ -991,6 +991,7 @@ void printSockets(){
 
 		socket_store_t socketTuple;
 		int i;
+		int numUnacked;
 		i = call socketHashMap.get(((nodeSrcPort) << 24)|((nodeDestPort) << 16)| nodeDest);
 
 
@@ -1294,24 +1295,18 @@ void printSockets(){
 								{
 
 									// ACK SUCCESSFULLY RECEIVED ON TIME, DEQUEUE
-
-									// update last sent
-									//socketTuple.lastSent++;
 									socketTuple.lastAck++;
 									socketTuple.lastSuccessfulSeq = socketTuple.seq;
 									socketTuple.seq += (call ackQ.element(0)).bytes;
 									socketTuple.lastSent += (call ackQ.element(0)).bytes;
 									socketTuple.numberOfBytesSentAndAcked += (call ackQ.element(0)).bytes;
-
 									call ackQ.dequeue();
-
-									//socketTuple.ackReceived [socketTuple.seq - ] = 1;
-
-									//for (i = thisPack'sAcKNUM - InitialACKNum; ((i >= 0) && (socketTuple.ackReceived[i] == 0)); i--) {
-									//	socketTuple.ackReceived[i] = 1;
-									//}
-
 									call Transport.updateSocketArray(socketTuple.fd, &socketTuple);
+
+									// check if its time to continueTCPStream
+									for( i = 0; i < call ackQ.size(); i++)
+
+
 									//dbg(TRANSPORT_CHANNEL, "next seq: %u\n", socketTuple.seq);
 
 
@@ -1325,8 +1320,8 @@ void printSockets(){
 								else {
 
 											// resend the packet
-											buffPtr = &socketTuple.sendBuff[socketTuple.lastSent];
-											sendTCP (0b00010000, socketTuple.dest.addr, socketTuple.src, socketTuple.dest.port, socketTuple.seq, socketTuple.ack, buffPtr, 1);
+											/*buffPtr = &socketTuple.sendBuff[socketTuple.lastSent];
+											sendTCP (0b00010000, socketTuple.dest.addr, socketTuple.src, socketTuple.dest.port, socketTuple.seq, socketTuple.ack, buffPtr, 1);*/
 
 								}
 								/*else // resend the packet, from sendBuff[0]
