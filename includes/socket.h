@@ -35,12 +35,12 @@ typedef nx_struct socket_addr_t{
 }socket_addr_t;
 
 typedef struct unAckedPackets{
-    int index;
+    int index;  // index in sendBuffer of the first data byte that was sent in this pack
     int ack;
     int seq;
     uint8_t * data;
     uint32_t timeOut;
-    int bytes;
+    int bytes;  // number of bytes that the pack contained. Usually 9 bytes per pack
     uint16_t destAddr;
     socket_port_t srcPort;
     socket_port_t destPort;
@@ -81,6 +81,8 @@ typedef struct socket_store_t{
 
     int lowestUnackedSentByte;
     int lastSuccessfulSeq; // records the last seq that was successfully sent and received an ack
+
+    char userName[10];
 
 
     // This is the receiver portion
