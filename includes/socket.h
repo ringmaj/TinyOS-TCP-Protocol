@@ -38,6 +38,7 @@ typedef struct unAckedPackets{
     int index;  // index in sendBuffer of the first data byte that was sent in this pack
     int ack;
     int seq;
+    int lastSent;
     uint8_t * data;
     uint32_t timeOut;
     int bytes;  // number of bytes that the pack contained. Usually 9 bytes per pack
