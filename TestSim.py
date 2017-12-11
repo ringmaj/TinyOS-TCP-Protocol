@@ -226,8 +226,10 @@ def main():
 	s.runTime(10);
 	s.cmdSetAppClient(3, 2, 3, 41, "node3\0\0\0\0");
 	s.runTime(10);
-	s.cmdSetAppClient(3, 2, 3, 41, "node4\0\0\0\0");
-	s.runTime(30);
+	s.cmdSetAppClient(4, 2, 3, 41, "node4\0\0\0\0");
+	s.runTime(10);
+	s.cmdSetAppClient(5, 2, 3, 41, "node5\0\0\0\0");
+	s.runTime(10);
 	s.cmdSendText(1, 2, 2, 4, "Hello\0");
 	s.runTime(30);
 
