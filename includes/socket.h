@@ -67,8 +67,8 @@ typedef struct socket_store_t{
     socket_port_t src;
     socket_addr_t dest;
 	  uint16_t transfer;	// how many bytes should be transferred in total
-	  uint8_t numberOfBytesSent;	// Number of bytes sent from current node to the other node
-	  uint8_t numberOfBytesSentAndAcked;	//Number of bytes that have been sent from current node to the other node THAT HAVE BEEN ACKNOWLEDGED
+	  uint16_t numberOfBytesSent;	// Number of bytes sent from current node to the other node
+	  uint16_t numberOfBytesSentAndAcked;	//Number of bytes that have been sent from current node to the other node THAT HAVE BEEN ACKNOWLEDGED
     uint32_t seq;	// Sequence number = (index in sendBuff of first byte being sent, or about to be sent) + 1 = (number of bytes in other node's receive buffer) + 1
     uint32_t ack;	// Acknowledgement number  = (index in receiveBuff of next byte to recieve) + 1
 
@@ -83,7 +83,7 @@ typedef struct socket_store_t{
     int lowestUnackedSentByte;
     int lastSuccessfulSeq; // records the last seq that was successfully sent and received an ack
 
-    char userName[9];
+    char userName[10];
 
 
     // This is the receiver portion
