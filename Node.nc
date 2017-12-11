@@ -638,7 +638,7 @@ void printSockets(){
 		uint8_t * data;
 		int i;
 		int j;
-		int dataBytesInPack = 9; // how many bytes should be copied into the 9 byte data section of the TCP pack payload
+		int dataBytesInPack; // how many bytes should be copied into the 9 byte data section of the TCP pack payload
 		int numPacketsToSend; // stores the number of packets to send
 		int tempTimeOut;
 		int numOutstandingPackets;
@@ -648,6 +648,7 @@ void printSockets(){
 
 		// The lastSent is the index for the last byte in the sendBuff sent.
 		data = &(socketTuple.sendBuff[socketTuple.lastSent]);
+		dataBytesInPack = 9;
 
 
 		dbg(TRANSPORT_CHANNEL, "Number of Bytes Sent and Acked: %hhu\n", socketTuple.numberOfBytesSentAndAcked);
@@ -656,7 +657,10 @@ void printSockets(){
 		// if we already have sent the same number of bytes as our transfer, we may have already finished sending. Just wait for the acks to be sent or timeout and resend the packets
 		if(socketTuple.numberOfBytesSentAndAcked >= socketTuple.transfer)
 		{
-			dbg(CLEAN_OUTPUT, "We've already sent %hhu bytes! Wait for the acks or resend later\n", socketTuple.numberOfBytesSentAndAcked);
+			/*dbg(CLEAN_OUTPUT, "We've already sent %hhu bytes! Wait for the acks or resend later\n", socketTuple.numberOfBytesSentAndAcked);*/
+			dbg(TRANSPORT_CHANNEL, "Done transmitting!\n");
+			dbg (CLEAN_OUTPUT,"Bytes sent/acked: %hhu\t Transfer: %hu\n", socketTuple.numberOfBytesSentAndAcked ,socketTuple.transfer);
+
 			return;
 
 		}
@@ -708,7 +712,7 @@ void printSockets(){
 
 
 		 // record time that ack should arrive before
-		 rcvd_ack_time = call clientTimer.getNow() + socketTuple.RTT;
+		 rcvd_ack_time = call clientTimer.getNow() + 2*socketTuple.RTT;
 		 numOutstandingPackets = (socketTuple.numberOfBytesSent - socketTuple.numberOfBytesSentAndAcked)/9;
 
 
@@ -762,10 +766,14 @@ void printSockets(){
 				numPacketsToSend = socketTuple.sndWndSize/9; // find the number of packets to send
 				tempTimeOut = rcvd_ack_time;
 
-
+				dbg(TRANSPORT_CHANNEL, "CASE 1 \n");
 				dbg (TRANSPORT_CHANNEL, "(numberOfBytesSent(%hhu) - numberOfBytesSentAndAcked(%hhu))/9 = %hhu\n", socketTuple.numberOfBytesSent, socketTuple.numberOfBytesSentAndAcked, numOutstandingPackets );
 
 				dbg(CLEAN_OUTPUT, "numOutstandingPackets %d\n", numOutstandingPackets);
+				dbg(CLEAN_OUTPUT, "numPacketsToSend %d\n", numPacketsToSend);
+
+
+
 				numPacketsToSend -= numOutstandingPackets;
 				if(numPacketsToSend <= 0)
 					numPacketsToSend = 0;
@@ -778,9 +786,16 @@ void printSockets(){
 					if ((socketTuple.transfer - socketTuple.lastSent) < dataBytesInPack) {
 						dataBytesInPack = socketTuple.transfer - socketTuple.lastSent;
 						dbg("bytes in pack: %u\n", dataBytesInPack);
-						for(i = 0; i < 9 - dataBytesInPack + 1; i++)
-						socketTuple.sendBuff[socketTuple.lastSent + dataBytesInPack + i] = 0;
+						for(j = 0; j < 9 - dataBytesInPack + 1; j++)
+						socketTuple.sendBuff[socketTuple.lastSent + dataBytesInPack + j] = 0;
 					}
+
+					if(dataBytesInPack <= 0)
+					break;
+
+					dbg(TRANSPORT_CHANNEL, "dataBytesInPack = %d\n", dataBytesInPack);
+
+
 
 
 					// update the unackedPacket to add to our Queue
@@ -812,9 +827,9 @@ void printSockets(){
 					data = &(socketTuple.sendBuff[socketTuple.lastSent]);
 					//dbg(CLEAN_OUTPUT, "tempTimer: %u\n", tempTimeOut);
 					//dbg(CLEAN_OUTPUT, "tempTimer\n");
-					tempTimeOut += 1000;
+					tempTimeOut += 200;
 
-					dbg(CLEAN_OUTPUT, "SENT %u PACKETS!\n", i+1);
+					dbg(CLEAN_OUTPUT, "SENT %d PACKETS! %u Bytes!\n", i+1,dataBytesInPack);
 					dbg (TRANSPORT_CHANNEL, "Node %hu sends | (DATA, seq=%u, ack=%u)\n", TOS_NODE_ID, socketTuple.seq, socketTuple.ack);
 
 				}
@@ -828,6 +843,9 @@ void printSockets(){
 		{
 
 			if( socketTuple.theirAdvertisedWindow < 9){
+
+				dbg(TRANSPORT_CHANNEL, "CASE 2 \n");
+
 
 				// update the unackedPacket Queue
 				unverifiedPacket.index = socketTuple.lastSent;
@@ -845,9 +863,12 @@ void printSockets(){
 				if ((socketTuple.transfer - socketTuple.lastSent) < dataBytesInPack) {
 					dataBytesInPack = socketTuple.transfer - socketTuple.lastSent;
 					dbg("bytes in pack: %u\n", dataBytesInPack);
-					for(i = 0; i < 9 - dataBytesInPack + 1; i++)
-					socketTuple.sendBuff[socketTuple.lastSent + dataBytesInPack + i] = 0;
+					for(j = 0; j < 9 - dataBytesInPack + 1; j++)
+					socketTuple.sendBuff[socketTuple.lastSent + dataBytesInPack + j] = 0;
 				}
+
+				if(dataBytesInPack == 0)
+					return;
 
 				if(socketTuple.theirAdvertisedWindow < dataBytesInPack)
 					dataBytesInPack = socketTuple.theirAdvertisedWindow;
@@ -859,7 +880,7 @@ void printSockets(){
 
 				// Wait 1 RTT and check if the ack has arrived yet, if not resend the packet
 				 call clientTimer.startOneShot(tempTimeOut);
-				dbg(CLEAN_OUTPUT, "SENT %u PACKETS!\n", 1);
+				 dbg(CLEAN_OUTPUT, "SENT %d PACKETS! %u Bytes!\n", 1,dataBytesInPack);
 				dbg(CLEAN_OUTPUT, "should be less than 9, %hhu\n");
 				 dbg (TRANSPORT_CHANNEL, "Node %hu sends | (DATA, seq=%u, ack=%u)\n", TOS_NODE_ID, socketTuple.seq, socketTuple.ack);
 
@@ -870,6 +891,9 @@ void printSockets(){
 			}
 			else
 			{
+
+				dbg(TRANSPORT_CHANNEL, "CASE 3 \n");
+
 				// update the number of packets to send
 				numPacketsToSend = socketTuple.theirAdvertisedWindow/9;
 
@@ -884,9 +908,14 @@ void printSockets(){
 				if ((socketTuple.transfer - socketTuple.lastSent) < dataBytesInPack) {
 					dataBytesInPack = socketTuple.transfer - socketTuple.lastSent;
 					dbg("bytes in pack: %u\n", dataBytesInPack);
-					for(i = 0; i < 9 - dataBytesInPack + 1; i++)
-					socketTuple.sendBuff[socketTuple.lastSent + dataBytesInPack + i] = 0;
+					for(j = 0; j < 9 - dataBytesInPack + 1; j++)
+					socketTuple.sendBuff[socketTuple.lastSent + dataBytesInPack + j] = 0;
 				}
+
+				if(dataBytesInPack <= 0)
+				break;
+
+				dbg(TRANSPORT_CHANNEL, "dataBytesInPack = %d\n", dataBytesInPack);;
 
 				dbg (TRANSPORT_CHANNEL, "(numberOfBytesSent(%hhu) - numberOfBytesSentAndAcked(%hhu))/9 = %hhu\n", socketTuple.numberOfBytesSent, socketTuple.numberOfBytesSentAndAcked, numOutstandingPackets );
 
@@ -921,8 +950,8 @@ void printSockets(){
 				data = &(socketTuple.sendBuff[socketTuple.lastSent]);
 				//dbg(CLEAN_OUTPUT, "tempTimer: %u\n", tempTimeOut);
 				//dbg(CLEAN_OUTPUT, "tempTimer\n");
-				tempTimeOut += 1000;
-				dbg(CLEAN_OUTPUT, "SENT %u PACKETS!\n", i+1);
+				tempTimeOut += 200;
+				dbg(CLEAN_OUTPUT, "SENT %d PACKETS! %u Bytes!\n", i+1,dataBytesInPack);
 				dbg (TRANSPORT_CHANNEL, "Node %hu sends | (DATA, seq=%u, ack=%u)\n", TOS_NODE_ID, socketTuple.seq, socketTuple.ack);
 
 			}
@@ -1404,7 +1433,7 @@ void printSockets(){
 
 
 
-								dbg (TRANSPORT_CHANNEL, "Received an ack from Node %hu  |  (Data: %hhu, seq=%u, ack=%u)\n", myMsg->src, *((uint8_t *)(myMsg->payload + 11)),*((uint32_t *)(myMsg->payload + 3)), *((uint8_t *)(myMsg->payload + 7)));
+							//	dbg (TRANSPORT_CHANNEL, "Received an ack from Node %hu  |  (Data: %hhu, seq=%u, ack=%u)\n", myMsg->src, *((uint8_t *)(myMsg->payload + 11)),*((uint32_t *)(myMsg->payload + 3)), *((uint8_t *)(myMsg->payload + 7)));
 									//dbg (CLEAN_OUTPUT, "Received an ack from Node %hu  |  (Data: %hhu, seq=%u, ack=%u)\n", myMsg->src, *((uint8_t *)(myMsg->payload + 11)),*((uint32_t *)(myMsg->payload + 3)), *((uint8_t *)(myMsg->payload + 7)));
 
 									//dbg (CLEAN_OUTPUT, "Received Data: %hhu\n", *((uint8_t *)(myMsg->payload + 11)));
@@ -1594,6 +1623,7 @@ void printSockets(){
 
 							// clean output
 							dbg (CLEAN_OUTPUT, "Received Data: %hhu, %hhu, %hhu, %hhu, %hhu, %hhu, %hhu, %hhu, %hhu,\n", myMsg->payload[11], myMsg->payload[12], myMsg->payload[13], myMsg->payload[14], myMsg->payload[15], myMsg->payload[16],myMsg->payload[17],myMsg->payload[18],myMsg->payload[19]);
+							dbg (FINAL_OUTPUT, "Received Data: %hhu, %hhu, %hhu, %hhu, %hhu, %hhu, %hhu, %hhu, %hhu,\n", myMsg->payload[11], myMsg->payload[12], myMsg->payload[13], myMsg->payload[14], myMsg->payload[15], myMsg->payload[16],myMsg->payload[17],myMsg->payload[18],myMsg->payload[19]);
 
 							// Find the socket fd using the socket Hash Map
 							i = call socketHashMap.get(((myMsg->payload[2]) << 24)|((myMsg->payload[1]) << 16)| myMsg->src);
