@@ -182,7 +182,7 @@ def main():
 	s.loadTopo("example.topo");
 	s.loadNoise("no_noise.txt");
 	s.bootAll();
-	#s.addChannel(s.TRANSPORT_CHANNEL);
+	s.addChannel(s.TRANSPORT_CHANNEL);
 	s.addChannel(s.CLEAN_OUTPUT);
 	#s.addChannel(s.COMMAND_CHANNEL);
 	#s.addChannel(s.GENERAL_CHANNEL);

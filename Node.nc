@@ -274,6 +274,7 @@ implementation{ // each node's private variables must be declared here, (or it w
 	}
 
 	void sendTCP (uint8_t flags, uint16_t destination, uint8_t srcPort, uint8_t destPort, uint32_t seq, uint32_t ack, uint8_t* TCPData, uint8_t dataLength) {	// Establishes a TCP connection from the client to the server by sending an SYN Packet to the server
+		// The 8 bits in uint8_t flags are specified as follows: [b1 = SYN][b2 = ACK][b3 = FIN][b4 = DATA][b5 = 0][b6 = 0][b7 = 0][b8 = Special ACK (for TCP setup and teardown)]
 		uint8_t payloadArr [PACKET_MAX_PAYLOAD_SIZE];
 		uint32_t * ptr = (uint32_t *)(&(payloadArr[3])); //reinterpretcast<uint32_t>();
 		//dbg (COMMAND_CHANNEL, "Sending Ack packet from port %hhu to node %hhu at port %hhu \n", srcPort, destination, destPort);
@@ -971,6 +972,7 @@ void printSockets(){
 
 	event message_t* Receive.receive(message_t* msg, void* payload, uint8_t len){
 		int i;
+		uint8_t temp;
 		uint32_t key;
 		uint16_t copySrc;
 
@@ -1096,7 +1098,8 @@ void printSockets(){
 											socketTuple.isSender = FALSE;
 											socketTuple.dest.addr = myMsg->src;
 											socketTuple.dest.port = myMsg->payload[1];
-
+											socketTuple.numBytesRcvd = 0;
+											socketTuple.sndWndSize = 27;	// 27 bytes (3 packets) can be sent without receiving an ACK
 											dbg(COMMAND_CHANNEL, "Found empty socket! Socket #: %hhu\n", socketTuple.fd);
 											socketTuple.state = SYN_RCVD;
 											call Transport.updateSocketArray(i,&socketTuple);
@@ -1189,8 +1192,10 @@ void printSockets(){
 							//socketTuple.seq = *((uint32_t *)(myMsg->payload + 7)) + 1;
 							call Transport.updateSocketArray(socketTuple.fd, &socketTuple);
 
-							/*dbg (TRANSPORT_CHANNEL, "Received an ack from Node %hu  |  (Data: %hhu, seq=%u, ack=%u)\n", myMsg->src, *((uint8_t *)(myMsg->payload + 11)),*((uint32_t *)(myMsg->payload + 3)), *((uint8_t *)(myMsg->payload + 7)));*/
+							//dbg (TRANSPORT_CHANNEL, "Received an ack from Node %hu  |  (Data: %hhu, seq=%u, ack=%u)\n", myMsg->src, *((uint8_t *)(myMsg->payload + 11)),*((uint32_t *)(myMsg->payload + 3)), *((uint8_t *)(myMsg->payload + 7)));
 
+							dbg (TRANSPORT_CHANNEL, "Received an ack from Node %hu, AdvertisedWindow = %hhu\n", myMsg->src, *((uint8_t *)(myMsg->payload + 11)));
+							socketTuple.theirAdvertisedWindow = *((uint8_t *)(myMsg->payload + 11));
 							if (socketTuple.isSender){
 								//dbg (TRANSPORT_CHANNEL, "I'm the sender. Continuing TCP stream:\n");
 
@@ -1320,7 +1325,7 @@ void printSockets(){
 								//socketTuple.dest.port = myMsg->payload[1];
 
 								// read the effective window from the SYN-ACK Packet, and store it in socketTuple:
-								socketTuple.effectiveWindow = 50;
+								//socketTuple.effectiveWindow = 50;
 								//socketTuple.lastSent = 0;	// was already set to 0
 
 
@@ -1445,16 +1450,20 @@ void printSockets(){
 							{
 
 								// received the correct ACK! Now update the ack to (ACK + 1) since we're now expecting the next packets
+								
+								socketTuple.numBytesRcvd += 9;
 								socketTuple.ack += 9;
+								
 								call Transport.updateSocketArray(fd, &socketTuple);
 
 
 
 								// send an ACK
 								/*dbg(TRANSPORT_CHANNEL, "Sending ack to Node %hu  |  (Data: %hhu, seq=%u, ack=%u)\n", myMsg->src, *((uint8_t *)(myMsg->payload + 11)), socketTuple.seq, socketTuple.ack);*/
-								dbg (TRANSPORT_CHANNEL, "Sending ack to Node %hu  |  (Data: %hhu %hhu %hhu %hhu %hhu %hhu %hhu %hhu %hhu, seq=%u, ack=%u)\n", myMsg->src, myMsg->payload[11], myMsg->payload[12], myMsg->payload[13], myMsg->payload[14], myMsg->payload[15], myMsg->payload[16], myMsg->payload[17], myMsg->payload[18], myMsg->payload[19], socketTuple.seq, socketTuple.ack);
-
-								sendTCP (0b01000000, socketTuple.dest.addr, socketTuple.src, socketTuple.dest.port, socketTuple.seq, socketTuple.ack, &socketTuple.numberOfBytesSentAndAcked, 1);
+								// temp is now this node's advertised window. The advertisedWindow of the current node.:
+								temp = SOCKET_BUFFER_SIZE - ((socketTuple.ack - 1) - socketTuple.indLastByteReadFromRCVD);
+								dbg (TRANSPORT_CHANNEL, "Sending ack to Node %hu AdvertisedWindow: %hhu |  (Data: %hhu %hhu %hhu %hhu %hhu %hhu %hhu %hhu %hhu, seq=%u, ack=%u)\n", myMsg->src, temp, myMsg->payload[11], myMsg->payload[12], myMsg->payload[13], myMsg->payload[14], myMsg->payload[15], myMsg->payload[16], myMsg->payload[17], myMsg->payload[18], myMsg->payload[19], socketTuple.seq, socketTuple.ack);
+								sendTCP (0b01000000, socketTuple.dest.addr, socketTuple.src, socketTuple.dest.port, socketTuple.seq, socketTuple.ack, &temp, sizeof(temp));
 							}
 
 
@@ -1740,7 +1749,8 @@ void printSockets(){
 		socketTuple.numberOfBytesSent = 0;
 		socketTuple.numberOfBytesSentAndAcked  = 0;
 		socketTuple.lastSent = 0;	// 0 bytes have been sent so far
-		socketTuple.sndWndSize = 3;
+		socketTuple.sndWndSize = 27;	// 27 bytes (3 packets) can be sent without receiving an ACK
+		socketTuple.numBytesRcvd = 0;
 
 
 		// allocate the buffer

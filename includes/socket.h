@@ -60,7 +60,7 @@ typedef struct socket_store_t{
     socket_t fd;
 
     // Stores the window size, total number of packets that can be send without receiving an ack
-    uint16_t sndWndSize;
+    uint16_t sndWndSize;	// how many bytes the current node is allowed to send without receiving an ACK. This is one factor that limits how much to send, and when to stop sending
 
     nx_uint16_t srcAddr;
     socket_port_t src;
@@ -77,7 +77,7 @@ typedef struct socket_store_t{
     uint8_t ackReceived[SOCKET_BUFFER_SIZE];//Sender's boolean array, indicating whether a byte in sendBuff has been ACKed by the receiver. Initially (before the message is sent), this is filled with all 0's. Finally (after all data is sent) this is filled with all 1's. ackReceived[i] is 1 if and only if the "i"th byte in sendBuff has been ACKed, and is 0 otherwise. This gets updated when receiving an ACK packet
     uint8_t lastWritten;
     uint8_t lastAck;	//Number of bytes that have been sent to the other node THAT HAVE BEEN ACKNOWLEDGED
-    uint8_t lastSent;	//Number of bytes that have been sent to the other node
+    uint8_t lastSent;	// The index number in the sendBuffer of 1st byte the block that we are sending
 
     int lowestUnackedSentByte;
     int lastSuccessfulSeq; // records the last seq that was successfully sent and received an ack
@@ -87,14 +87,16 @@ typedef struct socket_store_t{
 
     // This is the receiver portion
     uint8_t rcvdBuff[SOCKET_BUFFER_SIZE];
-    uint8_t lastRead;
-    uint8_t lastRcvd;
+    //uint8_t lastRead;
+	uint8_t indLastByteReadFromRCVD;	// index of last byte read (and taken out of) the receive buffer by the app using the data
+    uint8_t numBytesRcvd;	// how many bytes the current node has received and put into it's receive buffer.
     uint8_t nextExpected;
 
     uint32_t RTT;
     uint16_t lastSentTime;
-    uint8_t effectiveWindow;
-
+    uint8_t theirAdvertisedWindow;	// number of bytes that the other side of connection can receive without overflowing the receive buffer. This is sent from receiver to the sender in the send buffer. So this is how many bytes the sender should send
+	// AdvertisedWindow = MaxRcvBuffer - ((NextByteExpected - 1) - LastByteRead )
+	// All the buffer space minus the buffer space that’s in use
 }socket_store_t;
 
 #endif
