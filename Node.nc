@@ -680,16 +680,16 @@ void printSockets(){
 
 
 				for(i = 0; i < SOCKET_BUFFER_SIZE; i++){
-						socketTuple.sendBuff[i] = 0;
-						}
+					socketTuple.sendBuff[i] = 0;
+				}
 
 				for(i = 0; i < socketTuple.transfer; i++){
-						socketTuple.sendBuff[i] = j;
-						j++;
-						}
+					socketTuple.sendBuff[i] = j;
+					j++;
+				}
 
-						socketTuple.lastSent = 0;
-					}
+				socketTuple.lastSent = 0;
+			}
 
 				// Update socket array
 				call Transport.updateSocketArray (socketTuple.fd, &socketTuple);
@@ -783,7 +783,7 @@ void printSockets(){
 
 					// send the packet
 					sendTCP (0b00010000, socketTuple.dest.addr, socketTuple.src, socketTuple.dest.port, socketTuple.seq, socketTuple.ack, data, 9);
-
+					socketTuple.numberOfBytesSent += 9;
 					// update the seq and data
 					socketTuple.seq += 9;
 					socketTuple.lastSent +=9;
@@ -809,6 +809,7 @@ void printSockets(){
 
 
 				sendTCP (0b00010000, socketTuple.dest.addr, socketTuple.src, socketTuple.dest.port, socketTuple.seq, socketTuple.ack, data, dataBytesInPack);
+				socketTuple.numberOfBytesSent += dataBytesInPack;
 				// update the unackedPacket Queue
 				call ackQ.enqueue(unverifiedPacket);
 			}
@@ -841,7 +842,7 @@ void printSockets(){
 
 				// send the packet
 				sendTCP (0b00010000, socketTuple.dest.addr, socketTuple.src, socketTuple.dest.port, socketTuple.seq, socketTuple.ack, data, 9);
-
+				socketTuple.numberOfBytesSent += dataBytesInPack;
 				// update the seq and data
 				socketTuple.seq += 9;
 				socketTuple.lastSent +=9;
@@ -1299,7 +1300,7 @@ void printSockets(){
 									for( i = 0; i < call ackQ.size(); i++){
 										numUnacked++;
 									}
-
+									dbg (TRANSPORT_CHANNEL, "numUnacked Packs = %hhu, (numberOfBytesSent(%hhu) - numberOfBytesSentAndAcked(%hhu))/9 = %hhu\n", numUnacked, socketTuple.numberOfBytesSent, socketTuple.numberOfBytesSentAndAcked, (socketTuple.numberOfBytesSent - socketTuple.numberOfBytesSentAndAcked)/9 );
 									if(numUnacked == socketTuple.sndWndSize)
 										continueTCPStream(socketTuple);
 
