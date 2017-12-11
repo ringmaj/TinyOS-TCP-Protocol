@@ -95,7 +95,7 @@ implementation{
 
             case CMD_MSG:
                 dbg(CLEAN_OUTPUT, "Command Type: App Client Message\n");
-                signal CommandHandler.appClientSend(buff[0], buff[1], buff[2], &buff[3]);
+                signal CommandHandler.appClientSend(buff[0], buff[1], buff[2], buff[3], &buff[4]);
                 break;
 
             default:

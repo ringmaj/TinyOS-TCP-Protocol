@@ -175,7 +175,7 @@ class TestSim:
 
 	def cmdSendText(self, source, destination, srcPort, destPort, message):
 		#print("{0}{1}{2}{3}".format(chr(destination), chr(srcPort), chr(destPort), message));
-		self.sendCMD(self.CMD_MSG, source, "{0}{1}{2}{3}".format(chr(destination), chr(srcPort), chr(destPort), message));
+		self.sendCMD(self.CMD_MSG, source, "{0}{1}{2}{3}{4}".format(chr(destination), chr(srcPort), chr(destPort), chr(len(message) + 1), message));
 
 		#remember that whitespace matters in python. This file uses spaces but not tabs
 
@@ -224,8 +224,12 @@ def main():
 	s.runTime(10);
 	s.cmdSetAppClient(1, 2, 3, 41, username);	#Set Node 1 as a n application client, that uses port 3 to use the webapp to connect to server 2 at server port 41
 	s.runTime(10);
-	s.cmdSendText(1, 2, 2, 4, "Hello");
+	s.cmdSetAppClient(3, 2, 3, 41, "node3\0\0\0\0");
 	s.runTime(10);
+	s.cmdSetAppClient(3, 2, 3, 41, "node4\0\0\0\0");
+	s.runTime(30);
+	s.cmdSendText(1, 2, 2, 4, "Hello\0");
+	s.runTime(30);
 
 
 

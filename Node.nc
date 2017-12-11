@@ -2221,9 +2221,9 @@ void printSockets(){
 			dbg (CLEAN_OUTPUT, "Called setAppClient! destination: %hu, srcPort: %hhu, destPort: %hhu, username: %s\n", destination, srcPort, destPort, (char *) username);
 	 	}
 
-	 	event void CommandHandler.appClientSend(uint16_t destination, uint8_t srcPort, uint8_t destPort, uint8_t * message){
-	 		dbg (CLEAN_OUTPUT, "Called appClientSend! Message is: %s\n", (char *)message);
-
+	 	event void CommandHandler.appClientSend(uint16_t destination, uint8_t srcPort, uint8_t destPort, uint8_t messageLen, uint8_t * message){
+	 		dbg (CLEAN_OUTPUT, "Called appClientSend! Message is: %sm messageLen is: %hhu\n", (char *)message, messageLen);
+			
 
 
 
