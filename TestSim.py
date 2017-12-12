@@ -15,13 +15,17 @@ class TestSim:
 	CMD_ROUTE_DUMP=3
 	CMD_LINKSTATE_DUMP = 2
 
-		#David added these commands. Their number values are copied from command.h
+	#David added these commands. Their number values are copied from command.h
 	CMD_TEST_CLIENT=4
 	CMD_TEST_SERVER=5
 	CMD_KILL=6
 	CMD_MSG=7
 	CMD_CLIENT_APP=8    #to set up app client
 	CMD_SERVER_APP=10	#to set up the app server
+	# Majok
+	CMD_LIST_USR=11	#to set up the app server
+	CMD_BROADCAST_MSG=12	# To used to broadcast a message to all users
+
 
 
 	# CHANNELS - see includes/channels.h
@@ -177,6 +181,19 @@ class TestSim:
 		#print("{0}{1}{2}{3}".format(chr(destination), chr(srcPort), chr(destPort), message));
 		self.sendCMD(self.CMD_MSG, source, "{0}{1}{2}{3}{4}".format(chr(destination), chr(srcPort), chr(destPort), chr(len(message) + 1), message));
 
+	def cmdListUsr(self, source, port):
+		#self.sendCMD (self.CMD_TEST_SERVER, address, port);
+		self.sendCMD (self.CMD_LIST_USR, source, "{0}".format( chr(port)));
+		# for the server at node [address] and [port], print all users connected
+		#print 'Testing\n'
+		#
+
+	def cmbBroadCast(self, source, destination, srcPort, destPort, message):
+		#print("{0}{1}{2}{3}".format(chr(destination), chr(srcPort), chr(destPort), message));
+		self.sendCMD(self.CMD_MSG, source, "{0}{1}{2}{3}{4}".format(chr(destination), chr(srcPort), chr(destPort), chr(len(message) + 1), message));
+
+
+
 		#remember that whitespace matters in python. This file uses spaces but not tabs
 
 def main():
@@ -219,19 +236,30 @@ def main():
 	s.runTime(30);
 
 	username = "acerpa\0\0\0"
-	s.runTime(10);
+	s.runTime(50);
 	s.cmdSetAppServer(2, 41);	#Set Node 2 as an application server at port 41
-	s.runTime(10);
+	s.runTime(40);
 	s.cmdSetAppClient(1, 2, 3, 41, username);	#Set Node 1 as a n application client, that uses port 3 to use the webapp to connect to server 2 at server port 41
-	s.runTime(10);
-	s.cmdSetAppClient(3, 2, 3, 41, "node3\0\0\0\0");
-	s.runTime(10);
+	s.runTime(60);
+	s.cmdSetAppClient(3, 2, 3, 41, "bcerpa\0\0\0");
+	s.runTime(60);
 	s.cmdSetAppClient(4, 2, 3, 41, "node4\0\0\0\0");
-	s.runTime(10);
+	s.runTime(120);
 	s.cmdSetAppClient(5, 2, 3, 41, "node5\0\0\0\0");
-	s.runTime(10);
-	s.cmdSendText(1, 2, 2, 4, "Hello\0");
-	s.runTime(30);
+	s.runTime(60);
+	s.cmdListUsr(3, 41);	#Lists all the users connected to this server
+
+	# s#.cmdSendText(1, 2, 2, 4, "listusr\r\n");
+    #
+	s.runTime(20);
+	# s.runTime(50);
+	# s.runTime(100);
+
+	#s.cmdListUsr(2, 41);	#Lists all the users connected to this server
+	# s.cmdSendText(1, 2, 2, 4, "Hello\0");
+	# s.runTime(200);
+	# s.cmdSendText(1, 2, 2, 4, "listusr\r\n");
+	# s.runTime(30);
 
 
 
