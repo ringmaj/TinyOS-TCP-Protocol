@@ -83,7 +83,7 @@ typedef struct socket_store_t{
     int lowestUnackedSentByte;
     int lastSuccessfulSeq; // records the last seq that was successfully sent and received an ack
 
-    char userName[10];
+    char userName[9];
 
 
     // This is the receiver portion
