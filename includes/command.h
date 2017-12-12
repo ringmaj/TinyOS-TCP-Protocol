@@ -20,7 +20,8 @@ enum{
 	CMD_MSG=7,	//for app mesages between client and server
 	CMD_ERROR=9,
 	CMD_CLIENT_APP=8,	//to set up app client
-	CMD_SERVER_APP=10	//to set up the app server
+	CMD_SERVER_APP=10,	//to set up the app server
+	CMD_LIST_USR=11,	//lists all the users connected to the server
 };
 
 enum{
