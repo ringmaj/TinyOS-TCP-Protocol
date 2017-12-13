@@ -120,7 +120,8 @@ implementation{ // each node's private variables must be declared here, (or it w
 
 	// Project 4
 	char name [10] = "myNodeName";
-	uint8_t appServerPortNum;
+	uint8_t appServerPortNum;	// port num of app server that this clientnode is connected to
+	uint8_t myAppServerNum;	// port num of the app of this current app server
 
 	// Used in neighbor discovery
 	uint16_t neighbors [50];
@@ -318,21 +319,6 @@ implementation{ // each node's private variables must be declared here, (or it w
 		//	dbg (COMMAND_CHANNEL, "%.2x\n", sendPackage.payload[seq]);
 		//}
 
-	}
-
-	void AppServerForwardMessage(socket_store_t socketTuple) {
-		int i;
-		socket_t fd;
-		uint8_t appPayload [9];
-		*((uint16_t*)(appPayload)) = socketTuple.dest.addr;
-
-		memcpy(appPayload + 2, socketTuple.rcvdBuff + socketTuple.indLastByteReadFromRCVD + 1, 9);
-		socketTuple.indLastByteReadFromRCVD += 9;
-		// runs once for each App client
-		for (i = 0; i < call appUserList.size(); i++) {
-			//memcpy(userSendBuff, appPayload, 9);
-			//appUserList.element(i).userPtr->sendBuff;
-		}
 	}
 
 	void printNeighbors (char channel []) {
@@ -606,31 +592,35 @@ void continueTCPStream (socket_store_t socketTuple) {	// client/sender
 
 //--------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
-	dbg(CLEAN_OUTPUT, "theirAdvertisedWindow = %hhu, sndWndSize %hu\n", socketTuple.theirAdvertisedWindow, socketTuple.sndWndSize);
+			dbg(CLEAN_OUTPUT, "theirAdvertisedWindow = %hhu, sndWndSize %hu\n", socketTuple.theirAdvertisedWindow, socketTuple.sndWndSize);
 
-		// if the receiver has enough space to receive our full sending window, then send the packets
+			// if the receiver has enough space to receive our full sending window, then send the packets
 
 			numPacketsToSend = 0; // find the number of packets to send
 
 			numBytesLeftToSend = socketTuple.transfer - socketTuple.numberOfBytesSentAndAcked;
 			dbg(CLEAN_OUTPUT, "num bytes left to send: %hu\n", numBytesLeftToSend);
 
-			while ( (numPacketsToSend * 9 < numBytesLeftToSend) && (numPacketsToSend * 9 < socketTuple.theirAdvertisedWindow) && (numPacketsToSend < (socketTuple.sndWndSize/9)))
+			while ( (numPacketsToSend * 9 < numBytesLeftToSend) && (numPacketsToSend * 9 < socketTuple.theirAdvertisedWindow) && (numPacketsToSend < (socketTuple.sndWndSize/9))){
 				numPacketsToSend++;
+			}
+				
 
 
 			tempTimeOut = rcvd_ack_time;
 
 			dbg (CLEAN_OUTPUT, "(numberOfBytesSent(%hu) - numberOfBytesSentAndAcked(%hu))/9 = %hhu\n", socketTuple.numberOfBytesSent, socketTuple.numberOfBytesSentAndAcked, numOutstandingPackets );
-			dbg(CLEAN_OUTPUT, "numOutstandingPackets %d\n", numOutstandingPackets);
+			
 
 			dbg(CLEAN_OUTPUT, "numPacketsToSend %d\n", numPacketsToSend);
-
+			dbg(CLEAN_OUTPUT, "numOutstandingPackets %d\n", numOutstandingPackets);
 			numPacketsToSend -= numOutstandingPackets;
-			if(numPacketsToSend <= 0)
+			if(numPacketsToSend <= 0){
 				numPacketsToSend = 0;
+			}
+				
 
-				dbg(CLEAN_OUTPUT, "numPacketsToSend %d\n", numPacketsToSend);
+			dbg(CLEAN_OUTPUT, "numPacketsToSend %d\n", numPacketsToSend);
 
 
 			for(i = 0; i < numPacketsToSend; i++){
@@ -730,6 +720,53 @@ void continueTCPStream (socket_store_t socketTuple) {	// client/sender
 
 
 }
+
+/*
+void appServerSendWhisper(socket_store_t socketTuple) {
+	dbg(FINAL_OUTPUT, "SEND WHISPER COMMAND ENTERED!\n");
+	
+}
+
+void appServerSendMsg (socket_store_t socketTuple) {
+	dbg(FINAL_OUTPUT, "SEND MESSAGE COMMAND ENTERED!\n");
+	
+}
+*/
+
+
+void AppServerForwardMessage(socket_store_t socketTuple) {
+	int i;
+	socket_t fd;
+	socket_store_t tempSock;
+	uint8_t appPayload [9];
+	//*((uint16_t*)(appPayload)) = socketTuple.dest.addr;
+	
+	memcpy(appPayload, socketTuple.rcvdBuff + socketTuple.numBytesRcvd-1, 9);
+	//socketTuple.indLastByteReadFromRCVD += 9;
+	dbg (FINAL_OUTPUT, "%c%c%c%c%c%c%c%c%c %c%c%c%c%c%c%c%c%c %c%c%c%c%c%c\n", socketTuple.rcvdBuff[socketTuple.numBytesRcvd + 0], socketTuple.rcvdBuff[socketTuple.numBytesRcvd + 1], socketTuple.rcvdBuff[socketTuple.numBytesRcvd + 2], socketTuple.rcvdBuff[socketTuple.numBytesRcvd + 3], socketTuple.rcvdBuff[socketTuple.numBytesRcvd + 4], socketTuple.rcvdBuff[socketTuple.numBytesRcvd + 5], socketTuple.rcvdBuff[socketTuple.numBytesRcvd + 6], socketTuple.rcvdBuff[socketTuple.numBytesRcvd + 7], socketTuple.rcvdBuff[socketTuple.numBytesRcvd + 8], socketTuple.rcvdBuff[socketTuple.numBytesRcvd + 9], socketTuple.rcvdBuff[socketTuple.numBytesRcvd + 10], socketTuple.rcvdBuff[socketTuple.numBytesRcvd + 11], socketTuple.rcvdBuff[socketTuple.numBytesRcvd + 12], socketTuple.rcvdBuff[socketTuple.numBytesRcvd + 13], socketTuple.rcvdBuff[socketTuple.numBytesRcvd + 14], socketTuple.rcvdBuff[socketTuple.numBytesRcvd + 15], socketTuple.rcvdBuff[socketTuple.numBytesRcvd + 16], socketTuple.rcvdBuff[socketTuple.numBytesRcvd + 17], socketTuple.rcvdBuff[socketTuple.numBytesRcvd + 18], socketTuple.rcvdBuff[socketTuple.numBytesRcvd + 19], socketTuple.rcvdBuff[socketTuple.numBytesRcvd + 20], socketTuple.rcvdBuff[socketTuple.numBytesRcvd + 21], socketTuple.rcvdBuff[socketTuple.numBytesRcvd + 22], socketTuple.rcvdBuff[socketTuple.numBytesRcvd + 23]);
+	//dbg (FINAL_OUTPUT, "ReceiveBuff: %s\n", socketTuple.rcvdBuff + socketTuple.numBytesRcvd-1);
+	//dbg (FINAL_OUTPUT, "appPayload: %s\n", appPayload);
+	//appPayload[8] = 0;
+	/*
+	// runs once for each App client
+	for (i = 0; i < call appUserList.size(); i++) {
+		tempSock = call Transport.getSocketArray((call appUserList.element(i)).fd);	// get pointer to the socket to send to (each of the client's sockets)
+		//if (tempSock->fd == socketTuple.fd){	// don't forward to the node that sent it
+		//	continue;
+		//}
+		
+		memcpy (tempSock.sendBuff + tempSock.lastSent, appPayload, 9);
+		tempSock.transfer += 9;
+		call Transport.updateSocketArray(tempSock.fd, &tempSock);
+		continueTCPStream(tempSock);
+		//memcpy(appUserList.element(i).userPtr->sendBuff, appPayload, 9);
+		//appUserList.element(i).userPtr->sendBuff;
+	}
+	
+	call Transport.updateSocketArray(socketTuple.fd, &socketTuple);
+	*/
+}
+
 
 // server's function to send user list to a particular node
 void sendAppUserList (socket_t fd) {
@@ -965,7 +1002,8 @@ void updateUnverifiedPacket(unAckedPackets unverifiedPacket, socket_store_t sock
 		z = 65;
 		//socket_store_t socketTuple;
 
-		appServerPortNum = 255;
+		appServerPortNum = 255;	// initially, this node is not connected to an app server, and is not an app client
+		myAppServerNum = 0;	// initially, this node is not a server
 		totalNumNodes++;
 		dbg(GENERAL_CHANNEL, "NUM NODES: %d\n", totalNumNodes);
 
@@ -1608,62 +1646,91 @@ void updateUnverifiedPacket(unAckedPackets unverifiedPacket, socket_store_t sock
 
 							// Find the socket fd using the socket Hash Map
 							i = call socketHashMap.get(((myMsg->payload[2]) << 24)|((myMsg->payload[1]) << 16)| myMsg->src);
+							dbg(FINAL_OUTPUT, "socket fd == %d\n", i);
 							socketTuple = call Transport.getSocketArray(i);
 
+							
 
 							// check if the seq you're receiving is the ack you expected, then you're receiving packet in the right order
 							if(*((uint32_t *)(myMsg->payload + 3)) == socketTuple.ack)
 							{
-
+								
 								// received the correct ACK! Now update the ack to (ACK + 1) since we're now expecting the next packets
 
 
 								socketTuple.ack += 9;
+								
+								
+								//memcpy(socketTuple.rcvdBuff + socketTuple.numBytesRcvd, myMsg->payload, 9);
+								//for (i = 0; i < 9; i++){
+								//	socketTuple.rcvdBuff[socketTuple.numBytesRcvd + i] = myMsg->payload[i];
+								//}
+								
+								dbg (FINAL_OUTPUT, "Receive Buffer: %c%c%c%c%c%c%c%c%c %c%c%c%c%c%c%c%c%c %c%c%c%c%c%c\n", socketTuple.rcvdBuff[socketTuple.numBytesRcvd + 0], socketTuple.rcvdBuff[socketTuple.numBytesRcvd + 1], socketTuple.rcvdBuff[socketTuple.numBytesRcvd + 2], socketTuple.rcvdBuff[socketTuple.numBytesRcvd + 3], socketTuple.rcvdBuff[socketTuple.numBytesRcvd + 4], socketTuple.rcvdBuff[socketTuple.numBytesRcvd + 5], socketTuple.rcvdBuff[socketTuple.numBytesRcvd + 6], socketTuple.rcvdBuff[socketTuple.numBytesRcvd + 7], socketTuple.rcvdBuff[socketTuple.numBytesRcvd + 8], socketTuple.rcvdBuff[socketTuple.numBytesRcvd + 9], socketTuple.rcvdBuff[socketTuple.numBytesRcvd + 10], socketTuple.rcvdBuff[socketTuple.numBytesRcvd + 11], socketTuple.rcvdBuff[socketTuple.numBytesRcvd + 12], socketTuple.rcvdBuff[socketTuple.numBytesRcvd + 13], socketTuple.rcvdBuff[socketTuple.numBytesRcvd + 14], socketTuple.rcvdBuff[socketTuple.numBytesRcvd + 15], socketTuple.rcvdBuff[socketTuple.numBytesRcvd + 16], socketTuple.rcvdBuff[socketTuple.numBytesRcvd + 17], socketTuple.rcvdBuff[socketTuple.numBytesRcvd + 18], socketTuple.rcvdBuff[socketTuple.numBytesRcvd + 19], socketTuple.rcvdBuff[socketTuple.numBytesRcvd + 20], socketTuple.rcvdBuff[socketTuple.numBytesRcvd + 21], socketTuple.rcvdBuff[socketTuple.numBytesRcvd + 22], socketTuple.rcvdBuff[socketTuple.numBytesRcvd + 23]);
+								socketTuple.numBytesRcvd += 9;
+								call Transport.updateSocketArray(i, &socketTuple);
 
-
-								call Transport.updateSocketArray(fd, &socketTuple);
-
-
-
+								//dbg (FINAL_OUTPUT, "rcvdBuff: %s\n", socketTuple.rcvdBuff + socketTuple.numBytesRcvd);
+								
+								
+								
 								// send an ACK
 								/*dbg(TRANSPORT_CHANNEL, "Sending ack to Node %hu  |  (Data: %hhu, seq=%u, ack=%u)\n", myMsg->src, *((uint8_t *)(myMsg->payload + 11)), socketTuple.seq, socketTuple.ack);*/
 								// temp is now this node's advertised window. The advertisedWindow of the current node.:
 								temp = SOCKET_BUFFER_SIZE - ((socketTuple.ack - 1) - socketTuple.indLastByteReadFromRCVD);
-								dbg (TRANSPORT_CHANNEL, "Sending ack to Node %hu AdvertisedWindow: %hhu |  (Data: %hhu %hhu %hhu %hhu %hhu %hhu %hhu %hhu %hhu, seq=%u, ack=%u)\n", myMsg->src, temp, myMsg->payload[11], myMsg->payload[12], myMsg->payload[13], myMsg->payload[14], myMsg->payload[15], myMsg->payload[16], myMsg->payload[17], myMsg->payload[18], myMsg->payload[19], socketTuple.seq, socketTuple.ack);
+								dbg (TRANSPORT_CHANNEL, "Sending ack to Node %hu AdvertisedWindow: %hhu |  (Data: %hhu %hhu %hhu %hhu %hhu %hhu %hhu %hhu %hhu), my seq=%u, my ack=%u\n", myMsg->src, temp, myMsg->payload[11], myMsg->payload[12], myMsg->payload[13], myMsg->payload[14], myMsg->payload[15], myMsg->payload[16], myMsg->payload[17], myMsg->payload[18], myMsg->payload[19], socketTuple.seq, socketTuple.ack);
 								sendTCP (0b01000000, socketTuple.dest.addr, socketTuple.src, socketTuple.dest.port, socketTuple.seq, socketTuple.ack, &temp, sizeof(temp));
 
 
-
-								//If the data pack is for an App, then handle the app here:
-								if (myMsg->payload[2] == appServerPortNum) {
-									dbg (FINAL_OUTPUT, "Received a data packet from Node %hu  |  (Data: '%c%c%c%c%c%c%c%c%c', seq=%u, ack=%u)\n", myMsg->src, myMsg->payload[11], myMsg->payload[12], myMsg->payload[13], myMsg->payload[14], myMsg->payload[15], myMsg->payload[16], myMsg->payload[17], myMsg->payload[18], myMsg->payload[19], *((uint32_t *)(myMsg->payload + 3)), *((uint8_t *)(myMsg->payload + 7)));
-
-
+								dbg (FINAL_OUTPUT, "myAppServerNum == %d, myMsg->payload[2] == %hhu, mySeqNum(which was just sent) == %u, myAckNum(which was just sent) == %u\n", myAppServerNum, myMsg->payload[2], socketTuple.seq, socketTuple.ack);
+								//If this node is the server, and the destPort is this server's App Port, then the message came from an app user
+								//App data codes (first byte):
+								// 3 = whisper
+								// 4 = msg
+								// 5 = listUsers
+								//
+								if (myMsg->payload[2] == myAppServerNum && myAppServerNum != 0) {
+									dbg (FINAL_OUTPUT, "It's a App data packet from  Node %hu  |  (Data: '%c%c%c%c%c%c%c%c%c', seq=%u, ack=%u)\n", myMsg->src, myMsg->payload[11], myMsg->payload[12], myMsg->payload[13], myMsg->payload[14], myMsg->payload[15], myMsg->payload[16], myMsg->payload[17], myMsg->payload[18], myMsg->payload[19], *((uint32_t *)(myMsg->payload + 3)), *((uint8_t *)(myMsg->payload + 7)));
 									// the pack is for an app connection (because the port number matches the app port number)
-									dbg (TRANSPORT_CHANNEL, "Received an App data pack\n");
+									//dbg (TRANSPORT_CHANNEL, "Received an App data pack\n");
 									// check if it's the first data packet of this connection (which caries the user's name)
-									if (socketTuple.numBytesRcvd < 9) {
-										dbg (TRANSPORT_CHANNEL, "First AppDataPack from this user: user to queue\n");
-										memcpy(appUsr.name, myMsg->payload + 11, 9);
+									if (socketTuple.numBytesRcvd <= 9) {	// Add new user
+										dbg (TRANSPORT_CHANNEL, "First AppDataPack from this user: Adding user to queue\n");
+										memcpy(appUsr.name,          myMsg->payload + 11, 9);
+										memcpy(socketTuple.userName, myMsg->payload + 11, 9);
 										appUsr.fd = socketTuple.fd;
 										call appUserList.enqueue(appUsr);
-									} else if ((uint32_t *)(payload + 11 + 2) == 0) {	// check if it's a nameList request (if the first 4 bytes of the app payload are all 0's)
+									} else if (myMsg->payload[11] == 3) {	//  whisper request (if the first byte of the app payload is 5)
+										dbg(FINAL_OUTPUT, "It's a whisper request\n");
+										//appServerSendWhisper(socketTuple);
+									} else if (myMsg->payload[11] == 4) {	//  msg request (if the first byte of the app payload is 5)
+										dbg(FINAL_OUTPUT, "It's a msg request\n");
+										appServerSendMsg(socketTuple);
+										AppServerForwardMessage(socketTuple);
+									} else if (myMsg->payload[11] == 5) {	//  nameList request (if the first byte of the app payload is 5)
 										// appMessage is a nameList request
 										dbg(FINAL_OUTPUT, "It's a nameList request\n");
 										sendAppUserList (socketTuple.fd);
+									} else {
+										dbg (FINAL_OUTPUT, "Unknown message Type: numBytesRcvd == %hhu, myMsg->payload[11] == %hhu\n", socketTuple.numBytesRcvd, myMsg->payload[11]);
 									}
 
 
 									// if the data is finished being sent, then forward the data to all the other app nodes
 									//if (socketTuple.numBytesRcvd >= socketTuple.transfer) {
-										AppServerForwardMessage(socketTuple);
+										
 									//}
 
 								}
-								socketTuple.numBytesRcvd += 9;
+								
+								
+								call Transport.updateSocketArray(i, &socketTuple);
+							} else {
+								dbg (TRANSPORT_CHANNEL, "The pack's seq num (%u) did not match my expected ack num (%u)\n", *((uint32_t *)(myMsg->payload + 3)), socketTuple.ack);
+								dbg(FINAL_OUTPUT, "socket fd == %d\n", i);
 							}
 
-
+							call Transport.updateSocketArray(i, &socketTuple);
 							break;
 
 
@@ -2107,7 +2174,7 @@ void updateUnverifiedPacket(unAckedPackets unverifiedPacket, socket_store_t sock
 
 			//------------------------------Copy of SetTestServer finished-----------------------------
 
-			appServerPortNum = port;	// receive.receive will check if a packet's port is set to appServerPortNum
+			myAppServerNum = port;	// receive.receive will check if a packet's port is set to myAppServerNum
 	 	}
 
 	 	event void CommandHandler.setAppClient(uint16_t destination, uint8_t srcPort, uint8_t destPort, uint8_t * username){
@@ -2128,7 +2195,7 @@ void updateUnverifiedPacket(unAckedPackets unverifiedPacket, socket_store_t sock
 			nodeDestPort = destPort;*/
 
 			dbg (COMMAND_CHANNEL, "Destination: %hhu, srcPort: %hhu, destPort: %hhu, transfer: %hu\n", destination, srcPort, destPort, transfer);
-
+			appServerPortNum = destPort;	// ensure that the client remembers what app it is connected to (which app port)
 
 			ad.port = srcPort;
 			ad.addr = TOS_NODE_ID;
@@ -2192,7 +2259,7 @@ void updateUnverifiedPacket(unAckedPackets unverifiedPacket, socket_store_t sock
 
 			memcpy(socketTuple.userName, username, 10);
 
-			dbg (FINAL_OUTPUT, "username is: %s : %hhu\n", socketTuple.userName);
+			dbg (FINAL_OUTPUT, "username is: %s, srcPort is: %hhu\n", socketTuple.userName, srcPort);
 			appServer = fd;
 			/*socketTuple.userName = (char *)message*/
 			call Transport.updateSocketArray(fd, &socketTuple);
@@ -2207,26 +2274,73 @@ void updateUnverifiedPacket(unAckedPackets unverifiedPacket, socket_store_t sock
 	 	}
 
 	 	event void CommandHandler.appClientSend(uint16_t destination, uint8_t srcPort, uint8_t destPort, uint8_t messageLen, uint8_t * message){
-	 		dbg (CLEAN_OUTPUT, "Called appClientSend! Message is: %sm messageLen is: %hhu\n", (char *)message, messageLen);
+			int i = 0;
+			int bytesWritten = 0;
+			socket_store_t socketTuple;
+			socketTuple = call Transport.getSocketArray(appServer);
+			dbg (CLEAN_OUTPUT, "Called appClientSend! Message is: %s messageLen is: %hhu\n", (char *)message, messageLen);
+			
+			
+			
+			// Copy the message into the sendBuffer (This must work for cases where messageLen < 8, messageLen == 8, and messageLen > 8. Also when messageLen%8 == 0 and messageLen%8 != 0)
 
+			for (i=0; i < (messageLen/8)*9; i+=9) {
+				socketTuple.sendBuff[socketTuple.lastSent + i] = 4;	// set first byte to 5, and rest of appPayload to 0's
+				memcpy(socketTuple.sendBuff + socketTuple.lastSent + i + 1, message + bytesWritten, 8);
+				bytesWritten += 8;
+			}
+			if (bytesWritten < messageLen) {
+				//dbg (FINAL_OUTPUT, "Last pack will need to be partially empty. bytesWritten(%d) < messageLen(%hhu). i = %d\n", bytesWritten, messageLen, i );
+				socketTuple.sendBuff[socketTuple.lastSent + i] = 4;
+				i++;
+				
+				memcpy(socketTuple.sendBuff + socketTuple.lastSent + i, message + bytesWritten, messageLen - bytesWritten);
+				i += messageLen - bytesWritten;
+				//dbg (FINAL_OUTPUT, "Increased i over what was just written. i = %d\n", i);
+				
+				//socketTuple.sendBuff[socketTuple.lastSent + i] = 2;
+				//set unused bytes to 0
+				
+			// This last part doesn't yet work. It's supposed to set the rest of the last packet to all 0's instead of garbage values
+				while (i % 9 != 0) {
+					//socketTuple.sendBuff[socketTuple.lastSent + i] = 0;
+					dbg (FINAL_OUTPUT, "set byte %hhu to 0\n", *(socketTuple.sendBuff + socketTuple.lastSent + i));
+					*(socketTuple.sendBuff + socketTuple.lastSent + i) = 0;
+					i++;
+				}
+				bytesWritten = messageLen;
+			}
+			//dbg (FINAL_OUTPUT, "Buffer is: 0x%.2x  %.2x %.2x %.2x %.2x %.2x %.2x %.2x %.2x   0x%.2x  %.2x %.2x %.2x %.2x %.2x %.2x %.2x %.2x   0x%.2x  %.2x %.2x %.2x %.2x %.2x %.2x %.2x %.2x\n", socketTuple.sendBuff[socketTuple.lastSent + 0], socketTuple.sendBuff[socketTuple.lastSent + 1], socketTuple.sendBuff[socketTuple.lastSent + 2], socketTuple.sendBuff[socketTuple.lastSent + 3], socketTuple.sendBuff[socketTuple.lastSent + 4], socketTuple.sendBuff[socketTuple.lastSent + 5], socketTuple.sendBuff[socketTuple.lastSent + 6], socketTuple.sendBuff[socketTuple.lastSent + 7], socketTuple.sendBuff[socketTuple.lastSent + 8], socketTuple.sendBuff[socketTuple.lastSent + 9], socketTuple.sendBuff[socketTuple.lastSent + 10], socketTuple.sendBuff[socketTuple.lastSent + 11], socketTuple.sendBuff[socketTuple.lastSent + 12], socketTuple.sendBuff[socketTuple.lastSent + 13], socketTuple.sendBuff[socketTuple.lastSent + 14], socketTuple.sendBuff[socketTuple.lastSent + 15], socketTuple.sendBuff[socketTuple.lastSent + 16], socketTuple.sendBuff[socketTuple.lastSent + 17], socketTuple.sendBuff[socketTuple.lastSent + 18], socketTuple.sendBuff[socketTuple.lastSent + 19], socketTuple.sendBuff[socketTuple.lastSent + 20], socketTuple.sendBuff[socketTuple.lastSent + 21], socketTuple.sendBuff[socketTuple.lastSent + 22], socketTuple.sendBuff[socketTuple.lastSent + 23]);
+			
+			
+			
+			//dbg (FINAL_OUTPUT, "Increase the transfer by i = %d bytes\n", i);
+			socketTuple.transfer += i;
 
+			call Transport.updateSocketArray(socketTuple.fd, &socketTuple);
+			continueTCPStream(socketTuple);
 
 
 	 	}
 
 		// appClient's function to send request to server for a list of users
 		event void CommandHandler.listUsers(uint8_t port){
+			int i;
 			socket_store_t socketTuple;
 			socketTuple = call Transport.getSocketArray(appServer);
 
 			//if ((uint32_t *)(payload + 2) == 0)
 
-			socketTuple.sendBuff[socketTuple.lastSent + 13] = 0;
-			socketTuple.sendBuff[socketTuple.lastSent+14] = 0;
-			socketTuple.sendBuff[socketTuple.lastSent+15] = 0;
-			socketTuple.sendBuff[socketTuple.lastSent+16] = 0;
+			socketTuple.sendBuff[socketTuple.lastSent] = 5;	// set first byte to 5, and rest of appPayload to 0's
+			for (i = 1; i < 9; i++) {
+				socketTuple.sendBuff[socketTuple.lastSent+i] = 0;
+			}
+			//socketTuple.sendBuff[socketTuple.lastSent+14] = 0;
+			//socketTuple.sendBuff[socketTuple.lastSent+15] = 0;
+			//socketTuple.sendBuff[socketTuple.lastSent+16] = 0;
+			dbg (FINAL_OUTPUT, "listUser Key: %d\n", 5);
 			//((uint32_t*)(socketTuple.sendBuff+socketTuple.lastSent + 2))* = 0;	// set bytes to 0
-			socketTuple.transfer += 4;	//sizeof(uint32_t);
+			socketTuple.transfer += 9;
 
 			call Transport.updateSocketArray(socketTuple.fd, &socketTuple);
 			continueTCPStream(socketTuple);

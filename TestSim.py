@@ -233,12 +233,12 @@ def main():
 	# s.runTime(10);
 	# #clientclose srcport and destport are backwards
 	# s.cmdClientClose (1, 2, 4, 2);
-	s.runTime(30);
+	
+	
+	#s.runTime(30);
 
-	username = "acerpa\0\0\0"
-	s.runTime(50);
-	s.cmdSetAppServer(2, 41);	#Set Node 2 as an application server at port 41
-	s.runTime(40);
+	#username = "acerpa\0\0\0"
+	'''
 	s.cmdSetAppClient(1, 2, 3, 41, username);	#Set Node 1 as a n application client, that uses port 3 to use the webapp to connect to server 2 at server port 41
 	s.runTime(60);
 	s.cmdSetAppClient(3, 2, 3, 41, "bcerpa\0\0\0");
@@ -248,7 +248,64 @@ def main():
 	s.cmdSetAppClient(5, 2, 3, 41, "node5\0\0\0\0");
 	s.runTime(60);
 	s.cmdListUsr(3, 41);	#Lists all the users connected to this server
-
+	'''
+	
+	text = "start"
+	username = "\0\0\0\0\0\0\0\0\0"
+	srcPort = 0 #will be chosen by human user
+	srcNode = 2
+	serverNode = 1
+	
+	s.runTime(50);
+	s.cmdSetAppServer(serverNode, 41);	#Set Node 2 as an application server at port 41
+	s.runTime(40);
+	
+	print ("Adding clients 4 and 5")
+	
+	s.runTime(60);
+	s.cmdSetAppClient(4, serverNode, 3, 41, "node4\0\0\0\0");
+	s.runTime(120);
+	s.cmdSetAppClient(5, serverNode, 3, 41, "node5\0\0\0\0");
+	s.runTime(60);
+	
+	print("You are at node " + str(srcNode) + ", server is at node " + str(serverNode))
+	
+	while (text[0:1] != "q"):
+		s.runTime(10);
+		text = raw_input("Send: ")
+		params = text.split()
+		
+		if(text[0:1] == "h"):	#open app client
+			username = params[1]
+			srcPort = int(params[2])
+			#print ("user", username, ", clientPort: ", srcPort)
+			s.runTime(50);
+			s.cmdSetAppClient(srcNode, serverNode, srcPort, 41, username)
+			
+			
+			#def cmdSendText(self, source, destination, srcPort, destPort, message)
+		elif(text[0:1] == "m"):	#app client send text
+			message = text[len(params[0]) + 1:]
+			#print("Message: ", message)
+			s.runTime(50);
+			s.cmdSendText(srcNode, serverNode, srcPort, 41, message)
+			
+		elif(text[0:1] == "l"):	#app client list users
+			#def cmdListUsr(self, source, port):
+			#message = text[len(params[0]) + 1:]
+			#print("Message: ", message)
+			s.runTime(50);
+			s.cmdListUsr(srcNode, 0)
+			
+			'''
+		elif(text[0:1] == "q"):	#app client close
+			message = text[len(params[0]) + 1:]
+			print("Message: ", message)
+			s.runTime(50);
+			s.cmdSendText(srcNode,serverNode, srcPort, 41, "Hello")
+			'''
+		s.runTime(20);
+	
 	# s#.cmdSendText(1, 2, 2, 4, "listusr\r\n");
     #
 	s.runTime(20);
